@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:18.6-alpine3.24
+    container_name: db-postgres
+    user: "${POSTGRES_ALPINE_GROUP_UID}:${POSTGRES_ALPINE_USER_UID}" # Forces to use the non-root user Container "postgres"
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PWD}
+      - POSTGRES_DB=${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 50s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+  backend:
+    container_name: backend-restaurante
+    build:
+      context: ../
+      no_cache: true
+      dockerfile: ./docker/application/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker #indicates to use the application-docker.properties settings
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
