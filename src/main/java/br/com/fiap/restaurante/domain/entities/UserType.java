@@ -1,11 +1,10 @@
-package br.com.fiap.restaurante.entities;
+package br.com.fiap.restaurante.domain.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
 
 @Getter
-@Setter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "user_type")
 public class UserType {
