@@ -5,7 +5,7 @@ import br.com.fiap.restaurante.domain.entities.UserType;
 import java.util.List;
 import java.util.Optional;
 
-public interface UserTypeGateway {
+public interface IUserTypeGateway {
 
     UserType save(UserType userType);
 
