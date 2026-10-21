@@ -12,13 +12,20 @@ public class UserType {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Setter
     @Column(nullable = false, length = 50)
     private String name;
 
+    @Setter
     @Column(nullable = false, length = 30)
     private String code;
 
     public UserType(String name, String code) {
+        this.name = name;
+        this.code = code;
+    }
+
+    public void update(String name, String code) {
         this.name = name;
         this.code = code;
     }
