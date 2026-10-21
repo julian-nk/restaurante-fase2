@@ -6,7 +6,7 @@ WORKDIR /restaurante
 
 COPY . .
 
-RUN chmod +x ./mvnw
+RUN sed -i 's/\r$//' ./mvnw && chmod +x ./mvnw
 
 RUN --mount=type=cache,target=/root/.m2 \
     ./mvnw -f /restaurante/pom.xml clean package -DskipTests
