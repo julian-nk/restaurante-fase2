@@ -1,5 +1,6 @@
 package br.com.fiap.restaurante.core.domain;
 
+import lombok.Builder;
 import lombok.Getter;
 
 @Getter
@@ -12,6 +13,7 @@ public class UserType {
     private String name;
     private String code;
 
+    @Builder
     public UserType(Long id, String name, String code) {
         this.id = id;
         this.name = name;

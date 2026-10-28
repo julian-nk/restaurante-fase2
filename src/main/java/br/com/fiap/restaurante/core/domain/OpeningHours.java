@@ -1,6 +1,7 @@
 package br.com.fiap.restaurante.core.domain;
 
 import br.com.fiap.restaurante.core.exception.InvalidFieldException;
+import lombok.Builder;
 import lombok.Getter;
 
 import java.time.DayOfWeek;
@@ -21,6 +22,7 @@ public class OpeningHours {
     private final LocalTime openingTime;
     private final LocalTime closingTime;
 
+    @Builder
     public OpeningHours(Long id, DayOfWeek dayOfWeek, LocalTime openingTime, LocalTime closingTime) {
         this.id = id;
         this.dayOfWeek = dayOfWeek;

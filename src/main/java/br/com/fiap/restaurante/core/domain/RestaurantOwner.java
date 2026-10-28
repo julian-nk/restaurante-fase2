@@ -1,5 +1,6 @@
 package br.com.fiap.restaurante.core.domain;
 
+import lombok.Builder;
 import lombok.Getter;
 
 import java.time.OffsetDateTime;
@@ -13,6 +14,7 @@ public class RestaurantOwner extends Person {
     private String businessEmail;
     private List<Restaurant> restaurants;
 
+    @Builder
     public RestaurantOwner(String cpf, Long id, String name, String email, Address address, OffsetDateTime createdOn,
                            Long personId, String businessEmail, List<Restaurant> restaurants) {
         super(cpf, id, name, email, address);

@@ -1,6 +1,7 @@
 package br.com.fiap.restaurante.core.domain;
 
 import br.com.fiap.restaurante.core.exception.InvalidFieldException;
+import lombok.Builder;
 import lombok.Getter;
 
 import java.util.Comparator;
@@ -21,6 +22,7 @@ public class Restaurant {
     private Long ownerId;
     private List<OpeningHours> openingHours;
 
+    @Builder
     public Restaurant(Long id, String cnpj, Address address, String name, String cuisineType, Long ownerId,
                       List<OpeningHours> openingHours) {
         this.id = id;

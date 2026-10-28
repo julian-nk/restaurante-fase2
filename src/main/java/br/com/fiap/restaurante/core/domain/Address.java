@@ -1,11 +1,10 @@
 package br.com.fiap.restaurante.core.domain;
 
-import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 
 @Getter
-@Builder(access = AccessLevel.PROTECTED)
+@Builder
 public class Address {
 
     private Long id;
@@ -17,8 +16,9 @@ public class Address {
     private StatesEnum state;
     private String zipCode;
 
-    public Address(String street, String number, String complement, String neighborhood, String city, StatesEnum state,
-                   String zipCode) {
+    public Address(Long id, String street, String number, String complement, String neighborhood, String city,
+                   StatesEnum state, String zipCode) {
+        this.id = id;
         this.street = street;
         this.number = number;
         this.complement = complement;

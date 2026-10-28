@@ -1,6 +1,7 @@
 package br.com.fiap.restaurante.core.domain;
 
 import br.com.fiap.restaurante.core.exception.InvalidFieldException;
+import lombok.Builder;
 import lombok.Getter;
 
 import java.math.BigDecimal;
@@ -20,6 +21,7 @@ public class MenuItem {
     private boolean dineInOnly;
     private String photoUrl;
 
+    @Builder
     MenuItem(
             Long id,
             Long restaurantId,

@@ -2,12 +2,14 @@ package br.com.fiap.restaurante.core.domain;
 
 import br.com.fiap.restaurante.core.exception.InvalidFieldException;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 
 import java.util.Locale;
 import java.util.regex.Pattern;
 
 @Getter
+@Builder
 @AllArgsConstructor
 public class AppUser {
 

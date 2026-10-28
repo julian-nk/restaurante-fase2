@@ -1,5 +1,8 @@
 package br.com.fiap.restaurante.core.domain;
 
+import lombok.Getter;
+
+@Getter
 public enum StatesEnum {
 
     AC("AC"),
@@ -34,10 +37,6 @@ public enum StatesEnum {
 
     StatesEnum(String value) {
         this.value = value;
-    }
-
-    public String getValue() {
-        return value;
     }
 
     public static StatesEnum fromValue(String value) {
