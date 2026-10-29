@@ -10,6 +10,10 @@ import java.util.List;
 @Getter
 public class Restaurant {
 
+    static final int NAME_MAX_LENGTH = 150;
+    static final int CUISINE_TYPE_MAX_LENGTH = 50;
+    static final int CNPJ_LENGTH = 14;
+
     private static final Comparator<OpeningHours> BY_DAY_AND_TIME = Comparator
             .comparing(OpeningHours::getDayOfWeek)
             .thenComparing(OpeningHours::getOpeningTime);
@@ -26,11 +30,9 @@ public class Restaurant {
     public Restaurant(Long id, String cnpj, Address address, String name, String cuisineType, Long ownerId,
                       List<OpeningHours> openingHours) {
         this.id = id;
-        this.cnpj = cnpj;
-        this.address = address;
-        this.name = name;
-        this.cuisineType = cuisineType;
-        this.ownerId = ownerId;
+        this.cnpj = DomainValidation.requireDigits(cnpj, CNPJ_LENGTH, "CNPJ");
+        this.address = DomainValidation.requireNonNull(address, "endereço");
+        update(name, cuisineType, ownerId);
         this.openingHours = validateOpeningHours(openingHours);
     }
 
@@ -51,10 +53,14 @@ public class Restaurant {
         return openingHours.stream().sorted(BY_DAY_AND_TIME).toList();
     }
 
+    /** Valida os três campos antes de alterar qualquer um. */
     public void update(String name, String cuisineType, Long ownerId) {
-        this.name = name;
-        this.cuisineType = cuisineType;
-        this.ownerId = ownerId;
+        String validName = DomainValidation.requireText(name, NAME_MAX_LENGTH, "nome");
+        String validCuisineType = DomainValidation.requireText(cuisineType, CUISINE_TYPE_MAX_LENGTH, "tipo de cozinha");
+        Long validOwnerId = DomainValidation.requirePositive(ownerId, "ID do dono");
+        this.name = validName;
+        this.cuisineType = validCuisineType;
+        this.ownerId = validOwnerId;
     }
 
     public void updateAddress(

@@ -1,6 +1,8 @@
 package br.com.fiap.restaurante.infra.web;
 
 import br.com.fiap.restaurante.core.exception.SystemBaseException;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -14,8 +16,14 @@ import java.util.stream.Collectors;
  * Traduz as exceções do core em respostas HTTP. O core informa o status em cada exceção
  * ({@link SystemBaseException#getHttpStatus()}), então este handler é o único ponto que
  * conhece o Spring.
+ *
+ * <p>Precisa vir antes do {@code ProblemDetailsExceptionHandler} que o Spring Boot registra com
+ * {@code spring.mvc.problem-details.enabled=true}: ele tem {@code @Order(0)} e também trata
+ * {@link MethodArgumentNotValidException}, o que trocaria o formato dos erros de validação por Problem Details.
+ * As demais exceções do Spring MVC (JSON malformado, método não suportado etc.) continuam com ele.
  */
 @RestControllerAdvice
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(SystemBaseException.class)

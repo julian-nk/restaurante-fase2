@@ -31,8 +31,8 @@ public record CreateMenuItemJson(
         @Schema(description = "Preço, em reais.", example = "59.90")
         BigDecimal price,
 
-        @Schema(description = "Se verdadeiro, o prato só é servido no restaurante (não vai para delivery).", example = "false")
-        boolean dineInOnly,
+        @Schema(description = "Se verdadeiro, o prato só é servido no restaurante (não vai para delivery). Opcional: se omitido, vale false.", example = "false")
+        Boolean dineInOnly,
 
         @Size(max = 500, message = "A URL da foto deve ter no máximo 500 caracteres.")
         @Schema(description = "URL da foto do prato (opcional).", example = "https://exemplo.com/fotos/feijoada.jpg")
@@ -40,6 +40,6 @@ public record CreateMenuItemJson(
 ) {
 
     public CreateMenuItemInputDto toInputDto() {
-        return new CreateMenuItemInputDto(restaurantId, name, description, price, dineInOnly, photoUrl);
+        return new CreateMenuItemInputDto(restaurantId, name, description, price, Boolean.TRUE.equals(dineInOnly), photoUrl);
     }
 }

@@ -1,7 +1,6 @@
 package br.com.fiap.restaurante.core.domain;
 
 import br.com.fiap.restaurante.core.exception.InvalidFieldException;
-import org.apache.commons.lang3.StringUtils;
 
 import java.util.Locale;
 import java.util.regex.Pattern;
@@ -17,14 +16,14 @@ public final class DomainValidation {
     }
 
     static String requireText(String value, int maxLength, String field) {
-        if (StringUtils.isBlank(value)) {
+        if (value == null || value.isBlank()) {
             throw new InvalidFieldException("O campo " + field + " é obrigatório.");
         }
         return checkLength(value.trim(), maxLength, field);
     }
 
     static String optionalText(String value, int maxLength, String field) {
-        if (StringUtils.isBlank(value)) {
+        if (value == null || value.isBlank()) {
             return null;
         }
         return checkLength(value.trim(), maxLength, field);
@@ -32,7 +31,7 @@ public final class DomainValidation {
 
     /** Documento numérico (CPF, CNPJ, CEP): aceita pontos, traços, barras e espaços, e devolve só os dígitos. */
     static String requireDigits(String value, int length, String field) {
-        if (StringUtils.isBlank(value)) {
+        if (value == null || value.isBlank()) {
             throw new InvalidFieldException("O campo " + field + " é obrigatório.");
         }
         String digits = DOCUMENT_SEPARATORS.matcher(value).replaceAll("");

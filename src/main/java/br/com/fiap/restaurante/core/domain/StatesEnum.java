@@ -1,6 +1,9 @@
 package br.com.fiap.restaurante.core.domain;
 
+import br.com.fiap.restaurante.core.exception.InvalidFieldException;
 import lombok.Getter;
+
+import java.util.Locale;
 
 @Getter
 public enum StatesEnum {
@@ -39,12 +42,17 @@ public enum StatesEnum {
         this.value = value;
     }
 
+    /** Converte a sigla da UF, sem diferenciar maiúsculas de minúsculas ("sp" e "SP" valem). */
     public static StatesEnum fromValue(String value) {
+        if (value == null || value.isBlank()) {
+            throw new InvalidFieldException("O campo UF é obrigatório.");
+        }
+        String normalized = value.trim().toUpperCase(Locale.ROOT);
         for (StatesEnum state : StatesEnum.values()) {
-            if (state.getValue().equals(value)) {
+            if (state.getValue().equals(normalized)) {
                 return state;
             }
         }
-        throw new IllegalArgumentException("Estado brasileiro inválido. Recebido o valor " + value);
+        throw new InvalidFieldException("Estado brasileiro inválido. Recebido o valor " + value + ".");
     }
 }

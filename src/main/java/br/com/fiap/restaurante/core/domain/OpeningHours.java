@@ -25,12 +25,13 @@ public class OpeningHours {
     @Builder
     public OpeningHours(Long id, DayOfWeek dayOfWeek, LocalTime openingTime, LocalTime closingTime) {
         this.id = id;
-        this.dayOfWeek = dayOfWeek;
-        this.openingTime = openingTime;
-        this.closingTime = closingTime;
+        this.dayOfWeek = DomainValidation.requireNonNull(dayOfWeek, "dia da semana");
+        this.openingTime = DomainValidation.requireNonNull(openingTime, "horário de abertura");
+        this.closingTime = DomainValidation.requireNonNull(closingTime, "horário de fechamento");
 
-        if (openingTime.isBefore(closingTime)) {
-            throw new InvalidFieldException("O horário de abertura deve ser anterior ao horário de fechamento.");
+        // fechamento antes da abertura é permitido: o turno termina no dia seguinte (ver closesNextDay)
+        if (openingTime.equals(closingTime)) {
+            throw new InvalidFieldException("O horário de abertura deve ser diferente do horário de fechamento.");
         }
     }
 

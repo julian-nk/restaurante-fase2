@@ -135,7 +135,7 @@ public class OpenApiConfiguration {
                                     .addSecuritySchemes(BASIC_AUTH, new SecurityScheme()
                                             .type(SecurityScheme.Type.HTTP)
                                             .scheme("basic")
-                                            .description("Usuário e senha configurados no Spring Security.")))
+                                            .description("Login e senha de um usuário cadastrado na aplicação.")))
                 .addSecurityItem(new SecurityRequirement().addList(BASIC_AUTH));
     }
 

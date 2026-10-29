@@ -1,7 +1,6 @@
 package br.com.fiap.restaurante.core.domain;
 
 import br.com.fiap.restaurante.core.exception.InvalidFieldException;
-import org.apache.commons.lang3.StringUtils;
 
 public final class PasswordPolicy {
 
@@ -13,7 +12,7 @@ public final class PasswordPolicy {
     }
 
     public static void validate(String rawPassword) {
-        if (StringUtils.isBlank(rawPassword)) {
+        if (rawPassword == null || rawPassword.isBlank()) {
             throw new InvalidFieldException("A senha é obrigatória.");
         }
         if (rawPassword.length() < MIN_LENGTH || rawPassword.length() > MAX_LENGTH) {
