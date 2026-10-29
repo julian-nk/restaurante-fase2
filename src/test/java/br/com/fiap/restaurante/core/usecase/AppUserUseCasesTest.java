@@ -22,6 +22,7 @@ import org.mockito.ArgumentCaptor;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,7 +45,7 @@ class AppUserUseCasesTest {
     }
 
     private AppUser maria() {
-        return factory.restore(1L, 10L, "maria", "hash:senhaAtual1");
+        return factory.restore(1L, 10L, "maria", "hash:senhaAtual1", Set.of(2L));
     }
 
     @Nested

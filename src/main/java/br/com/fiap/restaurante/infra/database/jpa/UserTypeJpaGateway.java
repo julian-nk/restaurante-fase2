@@ -6,6 +6,8 @@ import br.com.fiap.restaurante.infra.database.jpa.repository.UserTypeRepository;
 import br.com.fiap.restaurante.infra.database.mapper.UserTypeMapper;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,6 +30,14 @@ public class UserTypeJpaGateway extends JpaGatewaySupport implements UserTypeGat
     @Override
     public Optional<UserType> findById(Long id) {
         return call(() -> userTypeRepository.findById(id).map(mapper::map));
+    }
+
+    @Override
+    public List<UserType> findAllById(Collection<Long> ids) {
+        return call(() -> userTypeRepository.findAllById(ids).stream()
+                .map(mapper::map)
+                .sorted(Comparator.comparing(UserType::getId))
+                .toList());
     }
 
     @Override

@@ -44,6 +44,16 @@ class UserTypeJpaGatewayTest {
     }
 
     @Test
+    void shouldFindAllByIdOrderedById() {
+        when(repository.findAllById(List.of(3L, 1L))).thenReturn(List.of(
+                new UserTypeEntity(3L, "Administrador", "admin"), new UserTypeEntity(1L, "Cliente", "customer")));
+
+        List<UserType> result = gateway.findAllById(List.of(3L, 1L));
+
+        assertEquals(List.of(1L, 3L), result.stream().map(UserType::getId).toList());
+    }
+
+    @Test
     void shouldFindById() {
         when(repository.findById(1L)).thenReturn(Optional.of(new UserTypeEntity(1L, "Cliente", "customer")));
 

@@ -43,7 +43,7 @@ docker compose up -d --build
 
 - O `--build` compila o projeto dentro da imagem com `mvnw clean package -DskipTests` (os testes não rodam nesse build). A primeira execução é mais lenta porque baixa as dependências do Maven; as seguintes reaproveitam o cache.
 - O `backend` só é iniciado depois que o banco passa no healthcheck, o que leva cerca de um minuto na primeira subida.
-- Ao iniciar, o Flyway cria as tabelas (scripts em `src/main/resources/db/migration`), cadastra os tipos de usuário iniciais (`restaurant_owner`, `customer`, `staff` e `premium_customer`) e cria dois usuários para acessar a API (ver abaixo).
+- Ao iniciar, o Flyway cria as tabelas (scripts em `src/main/resources/db/migration`), cadastra os tipos de usuário iniciais (`restaurant_owner`, `customer`, `staff`, `premium_customer` e `admin`) e cria três usuários para acessar a API (ver abaixo).
 
 ### 3. Acessar
 
@@ -51,10 +51,11 @@ docker compose up -d --build
 - OpenAPI em JSON: <http://localhost:8080/api-docs>
 - Endpoints: `http://localhost:8080/api/...` (ver [Endpoints](#endpoints))
 
-As rotas de `/api` exigem autenticação HTTP Basic com o login e a senha de um usuário cadastrado na aplicação (tabela `app_user`). A migration `V3__create_initial_users.sql` cria dois usuários para começar:
+As rotas de `/api` exigem autenticação HTTP Basic com o login e a senha de um usuário cadastrado na aplicação (tabela `app_user`). A migration `V3__create_initial_users.sql` cria três usuários para começar:
 
 | Login | Senha | Tipo de usuário | Papel |
 | --- | --- | --- | --- |
+| `admin` | `admin12345` | `admin` | Nenhum (pessoa sem papel) |
 | `cliente` | `cliente123` | `customer` | Cliente |
 | `dono` | `dono12345` | `restaurant_owner` | Dono de restaurante |
 
@@ -64,9 +65,9 @@ No Swagger, informe o login e a senha no botão *Authorize*. Pela linha de coman
 curl -u dono:dono12345 http://localhost:8080/api/user-types
 ```
 
-Outros usuários podem ser criados em `POST /api/app-users`, a partir de um cliente ou dono já cadastrado. O login não diferencia maiúsculas de minúsculas.
+Outros usuários podem ser criados em `POST /api/app-users`, a partir de uma pessoa já cadastrada, com ou sem papel (um administrador, por exemplo, pode ser cadastrado só como pessoa em `POST /api/persons`). O login não diferencia maiúsculas de minúsculas.
 
-> **Atenção:** esses dois usuários existem para facilitar os testes. Como a migration roda em qualquer ambiente, troque as senhas (`PATCH /api/app-users/{id}/password`) ou remova os usuários antes de usar a aplicação de verdade.
+> **Atenção:** esses usuários existem para facilitar os testes. Como a migration roda em qualquer ambiente, troque as senhas (`PATCH /api/app-users/{id}/password`) ou remova os usuários antes de usar a aplicação de verdade.
 
 ### Banco de dados
 
@@ -130,6 +131,7 @@ A documentação interativa (Swagger, em português) fica em `/my-docs`, e o JSO
 | Tipos de usuário | `POST/GET /api/user-types`, `GET/PUT/DELETE /api/user-types/{id}` |
 | Usuários | `POST/GET /api/app-users`, `GET/DELETE /api/app-users/{id}`, `PATCH /api/app-users/{id}/password` |
 | Tipos de um usuário | `GET /api/app-users/{appUserId}/types`, `POST/DELETE /api/app-users/{appUserId}/types/{userTypeId}` |
+| Pessoas | `POST/GET /api/persons`, `GET/PUT/DELETE /api/persons/{id}` |
 | Clientes | `POST/GET /api/customers`, `GET/PUT/DELETE /api/customers/{id}` |
 | Donos de restaurante | `POST/GET /api/restaurant-owners`, `GET/PUT/DELETE /api/restaurant-owners/{id}` |
 | Restaurantes | `POST/GET /api/restaurants`, `GET/PUT/DELETE /api/restaurants/{id}` |
@@ -154,11 +156,11 @@ Exemplo de cadastro de restaurante:
 
 ### Principais regras de negócio
 
-- **Pessoa:** só existe como cliente e/ou dona de restaurante; não há cadastro de pessoa avulsa. CPF (11 dígitos) e e-mail são únicos; CPF, CNPJ e CEP aceitam pontuação e são gravados só com dígitos. O endereço é opcional e, se omitido na atualização, é removido.
+- **Pessoa:** pode ser cadastrada sem papel (um administrador, por exemplo) e, depois, passar a ser cliente e/ou dona de restaurante. CPF (11 dígitos) e e-mail são únicos; CPF, CNPJ e CEP aceitam pontuação e são gravados só com dígitos. O endereço é opcional e, se omitido na atualização, é removido.
 - **Usuário:** uma pessoa tem no máximo um usuário; o login é único (minúsculo, letras/números/`._-`). A senha precisa de 8 a 72 caracteres, com letras e números, e só o hash BCrypt é gravado.
-- **Cliente e dono de restaurante** são cadastrados com os dados da pessoa, e o ID de cada um é o da pessoa. Se o CPF já existir porque a pessoa tem o outro papel, ela é reaproveitada e os dados enviados substituem os gravados. Ao remover o último papel de alguém, a pessoa é excluída junto, com o endereço e o usuário de acesso.
+- **Cliente e dono de restaurante** são cadastrados com os dados da pessoa, e o ID de cada um é o da pessoa. Se o CPF já existir (pessoa sem papel ou com o outro papel), ela é reaproveitada e os dados enviados substituem os gravados. Remover um papel não exclui a pessoa, mesmo que seja o último; para isso, use `DELETE /api/persons/{id}`, que exclui junto o endereço, os papéis e o usuário de acesso.
 - **Restaurante:** o dono precisa estar cadastrado como dono de restaurante, o CNPJ é único e é obrigatório ao menos um horário. Os turnos não podem se sobrepor, e um fechamento menor que a abertura indica que o turno termina no dia seguinte.
-- Não é possível remover um dono que ainda tenha restaurantes; só é possível cadastrar item de cardápio em restaurante existente.
+- Não é possível remover o papel de dono, nem excluir a pessoa, enquanto ela tiver restaurantes; só é possível cadastrar item de cardápio em restaurante existente.
 
 ## Diagrama Entidade-Relacionamento
 

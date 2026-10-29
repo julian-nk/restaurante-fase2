@@ -12,6 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -88,6 +89,28 @@ class AppUserTypeRepositoryTest {
                 .collect(Collectors.toSet());
 
         assertEquals(Set.of("customer", "owner"), codes);
+    }
+
+    @Test
+    void deveBuscarAsAssociacoesDeUmOuDeVariosUsuarios() {
+        Long maria = createAppUser(1001L, "maria");
+        Long joao = createAppUser(1002L, "joao");
+        Long ana = createAppUser(1003L, "ana");
+        Long customer = createUserType("Cliente", "customer");
+        Long admin = createUserType("Administrador", "admin");
+
+        appUserTypeRepository.save(new AppUserTypeEntity(maria, customer));
+        appUserTypeRepository.save(new AppUserTypeEntity(maria, admin));
+        appUserTypeRepository.save(new AppUserTypeEntity(joao, admin));
+        appUserTypeRepository.save(new AppUserTypeEntity(ana, customer));
+        appUserTypeRepository.flush();
+
+        assertEquals(Set.of(customer, admin), appUserTypeRepository.findByAppUserId(maria).stream()
+                .map(AppUserTypeEntity::getUserTypeId)
+                .collect(Collectors.toSet()));
+        assertEquals(Set.of(maria, joao), appUserTypeRepository.findByAppUserIdIn(List.of(maria, joao)).stream()
+                .map(AppUserTypeEntity::getAppUserId)
+                .collect(Collectors.toSet()));
     }
 
     private Long createAppUser(Long personId, String login) {
