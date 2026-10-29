@@ -56,6 +56,16 @@ class OpenApiConfigurationTest {
         mockMvc.perform(get("/api-docs"))
                 .andExpect(jsonPath("$.components.schemas.UserTypeOutputDto.description").value("Tipo de usuário."))
                 .andExpect(jsonPath("$.components.schemas.UserTypeOutputDto.properties.code.description")
-                        .value("Código único do tipo de usuário."));
+                        .value("Código único do tipo de usuário."))
+                .andExpect(jsonPath("$.components.schemas.PersonOutputDto.description")
+                        .value("Pessoa cadastrada, tenha ela papel (cliente ou dono de restaurante) ou não."));
+    }
+
+    @Test
+    void shouldDocumentThePersonsApi() throws Exception {
+        mockMvc.perform(get("/api-docs"))
+                .andExpect(jsonPath("$.paths['/api/persons'].post.summary").value("Cadastra uma pessoa"))
+                .andExpect(jsonPath("$.paths['/api/persons'].post.responses['201']").exists())
+                .andExpect(jsonPath("$.paths['/api/persons/{id}'].delete.responses['409']").exists());
     }
 }

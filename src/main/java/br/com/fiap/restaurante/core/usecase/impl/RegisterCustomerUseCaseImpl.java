@@ -10,11 +10,6 @@ import br.com.fiap.restaurante.core.gateway.CustomerGateway;
 import br.com.fiap.restaurante.core.gateway.PersonGateway;
 import br.com.fiap.restaurante.core.usecase.RegisterCustomerUseCase;
 
-/**
- * Cadastra uma pessoa como cliente. Se já existir uma pessoa com o CPF informado (porque ela é dona de
- * restaurante), a pessoa é reaproveitada: ela ganha o papel de cliente e seus dados (nome, e-mail e endereço)
- * são substituídos pelos enviados.
- */
 public class RegisterCustomerUseCaseImpl implements RegisterCustomerUseCase {
 
     private final CustomerGateway customerGateway;

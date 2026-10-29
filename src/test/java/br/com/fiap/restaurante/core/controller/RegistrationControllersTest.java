@@ -38,6 +38,31 @@ class RegistrationControllersTest {
     }
 
     @Test
+    void personControllerShouldDelegateToUseCases() {
+        var create = mock(CreatePersonUseCase.class);
+        var getAll = mock(GetPersonsUseCase.class);
+        var getById = mock(GetPersonByIdUseCase.class);
+        var update = mock(UpdatePersonUseCase.class);
+        var delete = mock(DeletePersonUseCase.class);
+        var controller = new PersonController(create, getAll, getById, update, delete);
+
+        var output = new PersonOutputDto(5L, "Ana", "ana@email.com", "39053344705", null);
+        var createInput = new CreatePersonInputDto("Ana", "ana@email.com", "39053344705", null);
+        var updateInput = new UpdatePersonInputDto(5L, "Ana", "ana@email.com", null);
+        when(create.execute(createInput)).thenReturn(output);
+        when(getAll.execute()).thenReturn(List.of(output));
+        when(getById.execute(5L)).thenReturn(output);
+        when(update.execute(updateInput)).thenReturn(output);
+
+        assertSame(output, controller.create(createInput));
+        assertEquals(List.of(output), controller.findAll());
+        assertSame(output, controller.findById(5L));
+        assertSame(output, controller.update(updateInput));
+        controller.delete(5L);
+        verify(delete).execute(5L);
+    }
+
+    @Test
     void customerControllerShouldDelegateToUseCases() {
         var register = mock(RegisterCustomerUseCase.class);
         var getAll = mock(GetCustomersUseCase.class);

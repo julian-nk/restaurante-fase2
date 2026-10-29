@@ -176,31 +176,21 @@ class CustomerAndRestaurantOwnerUseCasesTest {
         }
 
         @Test
-        void shouldDeleteOnlyTheRoleWhenPersonIsAlsoOwner() {
+        void shouldDeleteOnlyTheRoleKeepingThePerson() {
             when(customerGateway.existsById(1L)).thenReturn(true);
-            when(ownerGateway.existsById(1L)).thenReturn(true);
 
-            new DeleteCustomerUseCaseImpl(customerGateway, ownerGateway, personGateway).execute(1L);
+            new DeleteCustomerUseCaseImpl(customerGateway).execute(1L);
 
             verify(customerGateway).deleteById(1L);
-            verify(personGateway, never()).deleteById(any());
-        }
-
-        @Test
-        void shouldDeletePersonWhenCustomerWasItsOnlyRole() {
-            when(customerGateway.existsById(1L)).thenReturn(true);
-
-            new DeleteCustomerUseCaseImpl(customerGateway, ownerGateway, personGateway).execute(1L);
-
-            verify(personGateway).deleteById(1L);
-            verify(customerGateway, never()).deleteById(any());
+            verifyNoInteractions(personGateway);
         }
 
         @Test
         void shouldNotDeleteUnknownCustomer() {
-            var useCase = new DeleteCustomerUseCaseImpl(customerGateway, ownerGateway, personGateway);
+            var useCase = new DeleteCustomerUseCaseImpl(customerGateway);
 
             assertThrows(CustomerNotFoundException.class, () -> useCase.execute(1L));
+            verify(customerGateway, never()).deleteById(any());
         }
 
         @Test
@@ -231,7 +221,7 @@ class CustomerAndRestaurantOwnerUseCasesTest {
         }
 
         private DeleteRestaurantOwnerUseCaseImpl delete() {
-            return new DeleteRestaurantOwnerUseCaseImpl(ownerGateway, restaurantGateway, customerGateway, personGateway);
+            return new DeleteRestaurantOwnerUseCaseImpl(ownerGateway, restaurantGateway);
         }
 
         @Test
@@ -299,24 +289,13 @@ class CustomerAndRestaurantOwnerUseCasesTest {
         }
 
         @Test
-        void shouldDeleteOnlyTheRoleWhenPersonIsAlsoCustomer() {
+        void shouldDeleteOnlyTheRoleKeepingThePerson() {
             when(ownerGateway.existsById(1L)).thenReturn(true);
-            when(customerGateway.existsById(1L)).thenReturn(true);
 
             delete().execute(1L);
 
             verify(ownerGateway).deleteById(1L);
-            verify(personGateway, never()).deleteById(any());
-        }
-
-        @Test
-        void shouldDeletePersonWhenOwnerWasItsOnlyRole() {
-            when(ownerGateway.existsById(1L)).thenReturn(true);
-
-            delete().execute(1L);
-
-            verify(personGateway).deleteById(1L);
-            verify(ownerGateway, never()).deleteById(any());
+            verifyNoInteractions(personGateway);
         }
 
         @Test
@@ -327,7 +306,6 @@ class CustomerAndRestaurantOwnerUseCasesTest {
             when(restaurantGateway.existsByOwnerId(1L)).thenReturn(true);
             assertThrows(RestaurantOwnerHasRestaurantsException.class, () -> delete().execute(1L));
 
-            verify(personGateway, never()).deleteById(any());
             verify(ownerGateway, never()).deleteById(any());
         }
 

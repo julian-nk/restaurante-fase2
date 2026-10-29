@@ -35,6 +35,11 @@ public class DependencyInjectionConfiguration {
     }
 
     @Bean
+    public PersonFactory personFactory(AddressFactory addressFactory) {
+        return new PersonFactoryImpl(addressFactory);
+    }
+
+    @Bean
     public CustomerFactory customerFactory(AddressFactory addressFactory) {
         return new CustomerFactoryImpl(addressFactory);
     }
@@ -102,28 +107,26 @@ public class DependencyInjectionConfiguration {
 
     @Bean
     public AssociateUserTypeUseCase associateUserTypeUseCase(
-            AppUserTypeGateway appUserTypeGateway,
             AppUserGateway appUserGateway,
             UserTypeGateway userTypeGateway
     ) {
-        return new AssociateUserTypeUseCaseImpl(appUserTypeGateway, appUserGateway, userTypeGateway);
+        return new AssociateUserTypeUseCaseImpl(appUserGateway, userTypeGateway);
     }
 
     @Bean
     public GetUserTypesByAppUserUseCase getUserTypesByAppUserUseCase(
-            AppUserTypeGateway appUserTypeGateway,
-            AppUserGateway appUserGateway
+            AppUserGateway appUserGateway,
+            UserTypeGateway userTypeGateway
     ) {
-        return new GetUserTypesByAppUserUseCaseImpl(appUserTypeGateway, appUserGateway);
+        return new GetUserTypesByAppUserUseCaseImpl(appUserGateway, userTypeGateway);
     }
 
     @Bean
     public RemoveUserTypeFromAppUserUseCase removeUserTypeFromAppUserUseCase(
-            AppUserTypeGateway appUserTypeGateway,
             AppUserGateway appUserGateway,
             UserTypeGateway userTypeGateway
     ) {
-        return new RemoveUserTypeFromAppUserUseCaseImpl(appUserTypeGateway, appUserGateway, userTypeGateway);
+        return new RemoveUserTypeFromAppUserUseCaseImpl(appUserGateway, userTypeGateway);
     }
 
     @Bean
@@ -246,6 +249,50 @@ public class DependencyInjectionConfiguration {
         );
     }
 
+    // ---------- Pessoas ----------
+
+    @Bean
+    public CreatePersonUseCase createPersonUseCase(PersonGateway personGateway, PersonFactory factory) {
+        return new CreatePersonUseCaseImpl(personGateway, factory);
+    }
+
+    @Bean
+    public GetPersonsUseCase getPersonsUseCase(PersonGateway gateway) {
+        return new GetPersonsUseCaseImpl(gateway);
+    }
+
+    @Bean
+    public GetPersonByIdUseCase getPersonByIdUseCase(PersonGateway gateway) {
+        return new GetPersonByIdUseCaseImpl(gateway);
+    }
+
+    @Bean
+    public UpdatePersonUseCase updatePersonUseCase(PersonGateway personGateway, AddressFactory addressFactory) {
+        return new UpdatePersonUseCaseImpl(personGateway, addressFactory);
+    }
+
+    @Bean
+    public DeletePersonUseCase deletePersonUseCase(PersonGateway personGateway, RestaurantGateway restaurantGateway) {
+        return new DeletePersonUseCaseImpl(personGateway, restaurantGateway);
+    }
+
+    @Bean
+    public PersonController personController(
+            CreatePersonUseCase createPersonUseCase,
+            GetPersonsUseCase getPersonsUseCase,
+            GetPersonByIdUseCase getPersonByIdUseCase,
+            UpdatePersonUseCase updatePersonUseCase,
+            DeletePersonUseCase deletePersonUseCase
+    ) {
+        return new PersonController(
+                createPersonUseCase,
+                getPersonsUseCase,
+                getPersonByIdUseCase,
+                updatePersonUseCase,
+                deletePersonUseCase
+        );
+    }
+
     // ---------- Clientes ----------
 
     @Bean
@@ -277,12 +324,8 @@ public class DependencyInjectionConfiguration {
     }
 
     @Bean
-    public DeleteCustomerUseCase deleteCustomerUseCase(
-            CustomerGateway customerGateway,
-            RestaurantOwnerGateway restaurantOwnerGateway,
-            PersonGateway personGateway
-    ) {
-        return new DeleteCustomerUseCaseImpl(customerGateway, restaurantOwnerGateway, personGateway);
+    public DeleteCustomerUseCase deleteCustomerUseCase(CustomerGateway gateway) {
+        return new DeleteCustomerUseCaseImpl(gateway);
     }
 
     @Bean
@@ -335,12 +378,9 @@ public class DependencyInjectionConfiguration {
     @Bean
     public DeleteRestaurantOwnerUseCase deleteRestaurantOwnerUseCase(
             RestaurantOwnerGateway restaurantOwnerGateway,
-            RestaurantGateway restaurantGateway,
-            CustomerGateway customerGateway,
-            PersonGateway personGateway
+            RestaurantGateway restaurantGateway
     ) {
-        return new DeleteRestaurantOwnerUseCaseImpl(
-                restaurantOwnerGateway, restaurantGateway, customerGateway, personGateway);
+        return new DeleteRestaurantOwnerUseCaseImpl(restaurantOwnerGateway, restaurantGateway);
     }
 
     @Bean

@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 @Getter
@@ -19,6 +20,7 @@ public class AppUser {
     private final Long personId;
     private final String login;
     private String passwordHash;
+    private Set<UserType> userTypes;
 
     @Builder
     public AppUser(Long id, Long personId, String login, String passwordHash) {

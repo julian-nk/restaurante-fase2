@@ -36,8 +36,8 @@ public class RestaurantOwnerApi {
     @PostMapping
     @Operation(summary = "Cadastra um dono de restaurante",
             description = "Cadastra a pessoa junto com o papel de dono. Se já existir uma pessoa com o CPF "
-                    + "informado (por ser cliente), ela passa a ser também dona, e o nome, o e-mail e o "
-                    + "endereço dela são substituídos pelos enviados.")
+                    + "informado (cadastrada sem papel ou como cliente), ela passa a ser também dona, e o nome, "
+                    + "o e-mail e o endereço dela são substituídos pelos enviados.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Dono de restaurante cadastrado.",
                     content = @Content(schema = @Schema(implementation = RestaurantOwnerOutputDto.class))),
@@ -92,8 +92,8 @@ public class RestaurantOwnerApi {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Exclui um dono de restaurante",
-            description = "Remove o papel de dono, o que não é permitido enquanto ele tiver restaurantes. Se a "
-                    + "pessoa não for também cliente, ela é excluída junto, com o endereço e o usuário de acesso.")
+            description = "Remove o papel de dono, o que não é permitido enquanto ele tiver restaurantes. A pessoa "
+                    + "continua cadastrada, com os outros papéis que tiver. Para excluí-la, use DELETE /api/persons/{id}.")
     @Parameter(in = ParameterIn.PATH, name = "id", description = "ID do dono (o mesmo da pessoa)", example = "1")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Dono de restaurante excluído."),

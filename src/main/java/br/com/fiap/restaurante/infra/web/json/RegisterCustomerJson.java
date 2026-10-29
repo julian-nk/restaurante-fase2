@@ -7,8 +7,8 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-@Schema(description = "Dados para cadastrar um cliente. Se o CPF já pertencer a uma pessoa (por ser dona de "
-                      + "restaurante), ela passa a ser também cliente e os dados dela são substituídos por estes.")
+@Schema(description = "Dados para cadastrar um cliente. Se o CPF já pertencer a uma pessoa "
+                      + "(com ou sem outro papel), ela passa a ser também cliente e os dados dela são substituídos por estes.")
 public record RegisterCustomerJson(
         @NotBlank(message = "O nome é obrigatório.")
         @Size(max = 150, message = "O nome deve ter no máximo 150 caracteres.")

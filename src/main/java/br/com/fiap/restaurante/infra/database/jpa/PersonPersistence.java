@@ -17,9 +17,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Grava e lê os dados de pessoa (a tabela person e o endereço) para os gateways de cliente e de dono de
- * restaurante. Como {@link Person} é abstrata, a pessoa não tem gateway próprio de gravação: ela é sempre
- * gravada e lida junto com um dos papéis.
+ * Grava e lê os dados de pessoa (a tabela person e o endereço). É usada pelo gateway de pessoa e pelos
+ * gateways de cliente e de dono de restaurante, que gravam e leem a pessoa junto com o papel.
  *
  * <p>Os métodos não abrem transação nem traduzem exceções; isso fica com os gateways que os chamam.
  */
@@ -73,15 +72,24 @@ public class PersonPersistence {
                 person.getAddressId() == null ? null : addressRepository.findById(person.getAddressId()).orElse(null)));
     }
 
+    /** Carrega todas as pessoas, com os endereços buscados numa única consulta. */
+    public List<PersonRecord> findAll() {
+        return withAddresses(personRepository.findAll());
+    }
+
     /** Carrega várias pessoas de uma vez, com os endereços buscados numa única consulta. */
     public Map<Long, PersonRecord> findAllById(Collection<Long> ids) {
-        List<PersonEntity> persons = personRepository.findAllById(ids);
+        return withAddresses(personRepository.findAllById(ids)).stream()
+                .collect(Collectors.toMap(stored -> stored.person().getId(), Function.identity()));
+    }
+
+    private List<PersonRecord> withAddresses(List<PersonEntity> persons) {
         List<Long> addressIds = persons.stream().map(PersonEntity::getAddressId).filter(Objects::nonNull).toList();
         Map<Long, AddressEntity> addresses = addressRepository.findAllById(addressIds).stream()
                 .collect(Collectors.toMap(AddressEntity::getId, Function.identity()));
 
-        return persons.stream().collect(Collectors.toMap(
-                PersonEntity::getId,
-                person -> new PersonRecord(person, addresses.get(person.getAddressId()))));
+        return persons.stream()
+                .map(person -> new PersonRecord(person, addresses.get(person.getAddressId())))
+                .toList();
     }
 }

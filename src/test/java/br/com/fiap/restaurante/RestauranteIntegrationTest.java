@@ -42,6 +42,12 @@ class RestauranteIntegrationTest {
     private AppUserController appUserController;
 
     @Autowired
+    private AppUserTypeController appUserTypeController;
+
+    @Autowired
+    private PersonController personController;
+
+    @Autowired
     private CustomerController customerController;
 
     @Autowired
@@ -158,14 +164,77 @@ class RestauranteIntegrationTest {
         assertThrows(PersonAlreadyHasUserException.class, () -> appUserController.create(
                 new CreateAppUserInputDto(personId, "maria2", "senhaForte1")));
 
-        // ainda é dona, deixar de ser cliente, mas não apaga a pessoa
+        // remover um papel não apaga a pessoa, nem quando era o último
         customerController.delete(personId);
         assertThrows(CustomerNotFoundException.class, () -> customerController.findById(personId));
+        restaurantOwnerController.delete(personId);
+        assertThrows(RestaurantOwnerNotFoundException.class, () -> restaurantOwnerController.findById(personId));
+        assertEquals("Maria Souza", personController.findById(personId).name());
+        assertEquals("Av. Paulista", personController.findById(personId).address().street());
+    }
+
+    @Test
+    void shouldManagePersonWithoutRoleThroughAllLayers() {
+        PersonOutputDto created = personController.create(
+                new CreatePersonInputDto("Ana", "ana@email.com", "390.533.447-05", ADDRESS));
+        Long personId = created.id();
+        Long addressId = created.address().id();
+        assertEquals("39053344705", created.cpf());
+        assertTrue(personController.findAll().stream().anyMatch(person -> person.id().equals(personId)));
+        assertThrows(CpfAlreadyRegisteredException.class, () -> personController.create(
+                new CreatePersonInputDto("Outra", "outra@email.com", "39053344705", null)));
+        assertThrows(EmailAlreadyRegisteredException.class, () -> personController.create(
+                new CreatePersonInputDto("Outra", "ANA@email.com", "11144477735", null)));
+
+        PersonOutputDto updated = personController.update(
+                new UpdatePersonInputDto(personId, "Ana Pereira", "ana.pereira@email.com", null));
+        assertEquals("Ana Pereira", updated.name());
+        assertNull(updated.address());
+        assertFalse(addressRepository.existsById(addressId));
+
+        // a pessoa já existe, então o cadastro de cliente com o mesmo CPF só dá o papel a ela
+        CustomerOutputDto customer = customerController.register(
+                new CreateCustomerInputDto("Ana Pereira", "ana.pereira@email.com", "39053344705", null));
+        assertEquals(personId, customer.id());
+
+        customerController.delete(personId);
         assertTrue(personRepository.existsById(personId));
 
-        // era o último papel, deleta junto
-        restaurantOwnerController.delete(personId);
-        assertFalse(personRepository.existsById(personId));
+        personController.delete(personId);
+        assertThrows(PersonNotFoundException.class, () -> personController.findById(personId));
+        assertThrows(PersonNotFoundException.class, () -> personController.delete(personId));
+    }
+
+    @Test
+    void shouldNotDeletePersonThatStillOwnsRestaurants() {
+        Long ownerId = createRestaurant("33333333333", "33333333000133").ownerId();
+
+        assertThrows(RestaurantOwnerHasRestaurantsException.class, () -> personController.delete(ownerId));
+        assertTrue(personRepository.existsById(ownerId));
+    }
+
+    @Test
+    void shouldManageTheTypesOfAnAppUserThroughAllLayers() {
+        Long personId = personController.create(
+                new CreatePersonInputDto("Admin", "admin@email.com", "12345678909", null)).id();
+        Long userId = appUserController.create(new CreateAppUserInputDto(personId, "admin", "senhaForte1")).id();
+        Long admin = userTypeController.create(new CreateUserTypeInputDto("Administrador", "integration_admin_type")).id();
+        Long staff = userTypeController.create(new CreateUserTypeInputDto("Funcionário", "integration_staff")).id();
+
+        appUserTypeController.associate(userId, admin);
+        appUserTypeController.associate(userId, admin); // de novo: não duplica nem falha
+        appUserTypeController.associate(userId, staff);
+        assertEquals(List.of(admin, staff),
+                appUserTypeController.findUserTypes(userId).stream().map(UserTypeOutputDto::id).toList());
+
+        // trocar a senha grava o usuário de novo, e os tipos precisam continuar lá
+        appUserController.changePassword(new ChangePasswordInputDto(userId, "senhaForte1", "senhaNova2"));
+        assertEquals(2, appUserTypeController.findUserTypes(userId).size());
+
+        appUserTypeController.remove(userId, staff);
+        assertEquals(List.of("integration_admin_type"),
+                appUserTypeController.findUserTypes(userId).stream().map(UserTypeOutputDto::code).toList());
+        assertThrows(UserTypeNotFoundException.class, () -> appUserTypeController.associate(userId, 999_999L));
     }
 
     @Test

@@ -11,8 +11,8 @@ import br.com.fiap.restaurante.core.gateway.RestaurantOwnerGateway;
 import br.com.fiap.restaurante.core.usecase.RegisterRestaurantOwnerUseCase;
 
 /**
- * Cadastra uma pessoa como dona de restaurante. Se já existir uma pessoa com o CPF informado (porque ela é
- * cliente), a pessoa é reaproveitada: ela ganha o papel de dona e seus dados (nome, e-mail e endereço) são
+ * Cadastra uma pessoa como dona de restaurante. Se já existir uma pessoa com o CPF informado (cadastrada sem
+ * papel ou como cliente), a pessoa é reaproveitada: ela ganha o papel de dona e seus dados (nome, e-mail e endereço) são
  * substituídos pelos enviados.
  */
 public class RegisterRestaurantOwnerUseCaseImpl implements RegisterRestaurantOwnerUseCase {

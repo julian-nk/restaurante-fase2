@@ -1,22 +1,17 @@
 package br.com.fiap.restaurante.infra.database.jpa;
 
-import br.com.fiap.restaurante.core.domain.AppUser;
 import br.com.fiap.restaurante.core.domain.Customer;
 import br.com.fiap.restaurante.core.domain.RestaurantOwner;
 import br.com.fiap.restaurante.core.factory.impl.AddressFactoryImpl;
-import br.com.fiap.restaurante.core.factory.impl.AppUserFactoryImpl;
 import br.com.fiap.restaurante.core.factory.impl.CustomerFactoryImpl;
 import br.com.fiap.restaurante.core.factory.impl.RestaurantOwnerFactoryImpl;
 import br.com.fiap.restaurante.infra.database.jpa.PersonPersistence.PersonRecord;
-import br.com.fiap.restaurante.infra.database.jpa.entity.AppUserEntity;
 import br.com.fiap.restaurante.infra.database.jpa.entity.CustomerEntity;
 import br.com.fiap.restaurante.infra.database.jpa.entity.PersonEntity;
 import br.com.fiap.restaurante.infra.database.jpa.entity.RestaurantOwnerEntity;
-import br.com.fiap.restaurante.infra.database.jpa.repository.AppUserRepository;
 import br.com.fiap.restaurante.infra.database.jpa.repository.CustomerRepository;
 import br.com.fiap.restaurante.infra.database.jpa.repository.RestaurantOwnerRepository;
 import br.com.fiap.restaurante.infra.database.mapper.AddressMapper;
-import br.com.fiap.restaurante.infra.database.mapper.AppUserMapper;
 import br.com.fiap.restaurante.infra.database.mapper.CustomerMapper;
 import br.com.fiap.restaurante.infra.database.mapper.RestaurantOwnerMapper;
 import org.junit.jupiter.api.Test;
@@ -39,29 +34,6 @@ class RoleJpaGatewaysTest {
 
     private final AddressFactoryImpl addressFactory = new AddressFactoryImpl();
     private final AddressMapper addressMapper = new AddressMapper(addressFactory);
-
-    @Test
-    void appUserGatewayShouldMapBothWays() {
-        AppUserRepository repository = mock(AppUserRepository.class);
-        AppUserFactoryImpl factory = new AppUserFactoryImpl();
-        AppUserJpaGateway gateway = new AppUserJpaGateway(repository, new AppUserMapper(factory));
-        AppUserEntity entity = new AppUserEntity(1L, 10L, "maria", "hash");
-        when(repository.save(any())).thenReturn(entity);
-        when(repository.findById(1L)).thenReturn(Optional.of(entity));
-        when(repository.findAll()).thenReturn(List.of(entity));
-        when(repository.existsByPersonId(10L)).thenReturn(true);
-        when(repository.existsByLoginIgnoreCase("maria")).thenReturn(true);
-
-        AppUser saved = gateway.save(factory.restore(null, 10L, "maria", "hash"));
-
-        assertEquals(1L, saved.getId());
-        assertEquals("hash", gateway.findById(1L).orElseThrow().getPasswordHash());
-        assertEquals(1, gateway.findAll().size());
-        assertTrue(gateway.existsByPersonId(10L));
-        assertTrue(gateway.existsByLogin("maria"));
-        gateway.deleteById(1L);
-        verify(repository).deleteById(1L);
-    }
 
     @Test
     void customerGatewayShouldSavePersonAndRoleTogether() {

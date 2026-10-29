@@ -1,10 +1,13 @@
 package br.com.fiap.restaurante.core.domain;
 
 import br.com.fiap.restaurante.core.exception.InvalidFieldException;
+import lombok.Builder;
 import lombok.Getter;
 
+import java.util.Set;
+
 @Getter
-public abstract class Person {
+public class Person {
 
     static final int NAME_MAX_LENGTH = 150;
     private static final int CPF_LENGTH = 11;
@@ -15,7 +18,8 @@ public abstract class Person {
     private String email;
     private Address address;
 
-    protected Person(String cpf, Long id, String name, String email, Address address) {
+    @Builder(builderMethodName = "personBuilder")
+    public Person(String cpf, Long id, String name, String email, Address address) {
         this.cpf = normalizeCpf(cpf);
         this.id = id;
         this.name = DomainValidation.requireText(name, NAME_MAX_LENGTH, "nome");
@@ -35,7 +39,9 @@ public abstract class Person {
         return DomainValidation.requireDigits(cpf, CPF_LENGTH, "CPF");
     }
 
-    /** Valida os dois campos antes de alterar qualquer um. O e-mail é guardado em minúsculas. */
+    /**
+     * Valida os dois campos antes de alterar qualquer um. O e-mail é guardado em minúsculas.
+     */
     public void update(String name, String email) {
         String validName = DomainValidation.requireText(name, NAME_MAX_LENGTH, "nome");
         String validEmail = DomainValidation.requireEmail(email, "e-mail");
@@ -54,9 +60,6 @@ public abstract class Person {
         }
     }
 
-    /**
-     * Substitui nome, e-mail e endereço. Sem endereço, o atual é removido.
-     */
     public void updatePersonalData(String name, String email, Address address) {
         update(name, email);
         if (address == null) {

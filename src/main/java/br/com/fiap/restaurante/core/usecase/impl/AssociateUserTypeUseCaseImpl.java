@@ -1,40 +1,35 @@
 package br.com.fiap.restaurante.core.usecase.impl;
 
+import br.com.fiap.restaurante.core.domain.AppUser;
 import br.com.fiap.restaurante.core.dto.AppUserTypeInputDto;
 import br.com.fiap.restaurante.core.exception.AppUserNotFoundException;
 import br.com.fiap.restaurante.core.exception.UserTypeNotFoundException;
 import br.com.fiap.restaurante.core.gateway.AppUserGateway;
-import br.com.fiap.restaurante.core.gateway.AppUserTypeGateway;
 import br.com.fiap.restaurante.core.gateway.UserTypeGateway;
 import br.com.fiap.restaurante.core.usecase.AssociateUserTypeUseCase;
 
+/** Dá um tipo ao usuário. Se ele já tiver o tipo, nada é gravado e não há erro. */
 public class AssociateUserTypeUseCaseImpl implements AssociateUserTypeUseCase {
 
-    private final AppUserTypeGateway appUserTypeGateway;
     private final AppUserGateway appUserGateway;
     private final UserTypeGateway userTypeGateway;
 
-    public AssociateUserTypeUseCaseImpl(
-            AppUserTypeGateway appUserTypeGateway,
-            AppUserGateway appUserGateway,
-            UserTypeGateway userTypeGateway
-    ) {
-        this.appUserTypeGateway = appUserTypeGateway;
+    public AssociateUserTypeUseCaseImpl(AppUserGateway appUserGateway, UserTypeGateway userTypeGateway) {
         this.appUserGateway = appUserGateway;
         this.userTypeGateway = userTypeGateway;
     }
 
     @Override
     public void execute(AppUserTypeInputDto input) {
-
-        if (!appUserGateway.existsById(input.appUserId())) {
-            throw new AppUserNotFoundException(input.appUserId());
-        }
+        AppUser appUser = appUserGateway.findById(input.appUserId())
+                .orElseThrow(() -> new AppUserNotFoundException(input.appUserId()));
 
         if (userTypeGateway.findById(input.userTypeId()).isEmpty()) {
             throw new UserTypeNotFoundException(input.userTypeId());
         }
 
-        appUserTypeGateway.associate(input.appUserId(), input.userTypeId());
+        if (appUser.addUserType(input.userTypeId())) {
+            appUserGateway.save(appUser);
+        }
     }
 }

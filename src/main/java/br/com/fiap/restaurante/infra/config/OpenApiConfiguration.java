@@ -36,6 +36,7 @@ public class OpenApiConfiguration {
             Map.entry("CustomerOutputDto", "Cliente, com os dados da pessoa."),
             Map.entry("MenuItemOutputDto", "Prato do cardápio."),
             Map.entry("OpeningHoursOutputDto", "Horário de funcionamento em um dia da semana."),
+            Map.entry("PersonOutputDto", "Pessoa cadastrada, tenha ela papel (cliente ou dono de restaurante) ou não."),
             Map.entry("RestaurantOutputDto", "Restaurante, com endereço e horários de funcionamento."),
             Map.entry("RestaurantOwnerOutputDto", "Dono de restaurante, com os dados da pessoa."),
             Map.entry("UserTypeOutputDto", "Tipo de usuário.")

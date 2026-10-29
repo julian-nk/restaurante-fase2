@@ -35,8 +35,8 @@ public class CustomerApi {
     @PostMapping
     @Operation(summary = "Cadastra um cliente",
             description = "Cadastra a pessoa junto com o papel de cliente. Se já existir uma pessoa com o CPF "
-                    + "informado (por ser dona de restaurante), ela passa a ser também cliente, e o nome, o "
-                    + "e-mail e o endereço dela são substituídos pelos enviados.")
+                    + "informado (cadastrada sem papel ou como dona de restaurante), ela passa a ser também "
+                    + "cliente, e o nome, o e-mail e o endereço dela são substituídos pelos enviados.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Cliente cadastrado.",
                     content = @Content(schema = @Schema(implementation = CustomerOutputDto.class))),
@@ -87,8 +87,8 @@ public class CustomerApi {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Exclui um cliente",
-            description = "Remove o papel de cliente. Se a pessoa não for também dona de restaurante, ela é "
-                    + "excluída junto, com o endereço e o usuário de acesso.")
+            description = "Remove só o papel de cliente: a pessoa continua cadastrada, com os outros papéis que "
+                    + "tiver. Para excluir a pessoa, use DELETE /api/persons/{id}.")
     @Parameter(in = ParameterIn.PATH, name = "id", description = "ID do cliente (o mesmo da pessoa)", example = "1")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Cliente excluído."),

@@ -123,4 +123,19 @@ class PersonPersistenceTest {
         assertEquals(5L, persons.get(1L).address().getId());
         assertNull(persons.get(2L).address());
     }
+
+    @Test
+    void shouldFindAllPersonsLoadingAddressesInOneQuery() {
+        when(personRepository.findAll()).thenReturn(List.of(
+                new PersonEntity(1L, "Maria", "maria@email.com", "52998224725", 5L),
+                new PersonEntity(2L, "João", "joao@email.com", "11144477735", null)));
+        when(addressRepository.findAllById(List.of(5L))).thenReturn(List.of(ADDRESS));
+
+        List<PersonRecord> persons = persistence.findAll();
+
+        assertEquals(List.of(1L, 2L), persons.stream().map(stored -> stored.person().getId()).toList());
+        assertEquals(5L, persons.get(0).address().getId());
+        assertNull(persons.get(1).address());
+        verify(addressRepository, never()).findById(any());
+    }
 }
