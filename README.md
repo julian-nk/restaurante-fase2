@@ -51,24 +51,6 @@ docker compose up -d --build
 - OpenAPI em JSON: <http://localhost:8080/api-docs>
 - Endpoints: `http://localhost:8080/api/...` (ver [Endpoints](#endpoints))
 
-As rotas de `/api` exigem autenticação HTTP Basic com o login e a senha de um usuário cadastrado na aplicação (tabela `app_user`). A migration `V3__create_initial_users.sql` cria três usuários para começar:
-
-| Login | Senha | Tipo de usuário | Papel |
-| --- | --- | --- | --- |
-| `admin` | `admin12345` | `admin` | Nenhum (pessoa sem papel) |
-| `cliente` | `cliente123` | `customer` | Cliente |
-| `dono` | `dono12345` | `restaurant_owner` | Dono de restaurante |
-
-No Swagger, informe o login e a senha no botão *Authorize*. Pela linha de comando:
-
-```bash
-curl -u dono:dono12345 http://localhost:8080/api/user-types
-```
-
-Outros usuários podem ser criados em `POST /api/app-users`, a partir de uma pessoa já cadastrada, com ou sem papel (um administrador, por exemplo, pode ser cadastrado só como pessoa em `POST /api/persons`). O login não diferencia maiúsculas de minúsculas.
-
-> **Atenção:** esses usuários existem para facilitar os testes. Como a migration roda em qualquer ambiente, troque as senhas (`PATCH /api/app-users/{id}/password`) ou remova os usuários antes de usar a aplicação de verdade.
-
 ### Banco de dados
 
 O PostgreSQL também fica acessível pela sua máquina em `localhost:5432` (banco `restaurante`, com o usuário e a senha do `.env`), para consultar os dados com DBeaver, pgAdmin ou `psql`. Os dados ficam no volume `postgres_data` e são mantidos entre reinícios.
@@ -161,6 +143,38 @@ Exemplo de cadastro de restaurante:
 - **Cliente e dono de restaurante** são cadastrados com os dados da pessoa, e o ID de cada um é o da pessoa. Se o CPF já existir (pessoa sem papel ou com o outro papel), ela é reaproveitada e os dados enviados substituem os gravados. Remover um papel não exclui a pessoa, mesmo que seja o último; para isso, use `DELETE /api/persons/{id}`, que exclui junto o endereço, os papéis e o usuário de acesso.
 - **Restaurante:** o dono precisa estar cadastrado como dono de restaurante, o CNPJ é único e é obrigatório ao menos um horário. Os turnos não podem se sobrepor, e um fechamento menor que a abertura indica que o turno termina no dia seguinte.
 - Não é possível remover o papel de dono, nem excluir a pessoa, enquanto ela tiver restaurantes; só é possível cadastrar item de cardápio em restaurante existente.
+
+## Collection do Postman
+
+A collection [`postman/restaurante-fase2.postman_collection.json`](postman/restaurante-fase2.postman_collection.json) testa todos os endpoints da API, com asserções sobre o status e o corpo de cada resposta.
+
+### Como executar
+
+Com a aplicação no ar (ver [Executando com Docker](#executando-com-docker)):
+
+- **Postman:** importe o arquivo (*Import*) e execute a collection pelo *Collection Runner* (*Run*). Também é possível executar uma única pasta de cenário.
+
+Dentro de cada pasta, as requisições devem ser executadas na ordem em que aparecem, pois são cenários autocontidos, independentes do conjunto de requisições fora daquela pasta.
+
+Cada recurso tem uma subpasta **CRUD**, com os fluxos de sucesso, e uma subpasta **Validações**, com campos obrigatórios, formatos inválidos (CPF, CNPJ, CEP, UF, e-mail), duplicidades, regras de negócio e registros inexistentes.
+
+### Cenários autocontidos
+
+Cada pasta de cenário cria, nos primeiros passos, os dados de que precisa (pessoa, dono, restaurante etc.) e guarda os IDs em variáveis da collection para os passos seguintes. Nenhum cenário depende de dados criados por outro.
+
+Antes de cada requisição, um script da collection gera CPF, CNPJ, e-mail, login e código de tipo de usuário únicos. Assim, a collection pode ser executada várias vezes sobre o mesmo banco sem conflito.
+
+### Variáveis
+
+| Variável | Padrão | Uso |
+| --- | --- | --- |
+| `host` | `localhost` | Host da API |
+| `port` | `8080` | Porta da API |
+| `authLogin` / `authPassword` | `admin` / `admin12345` | Usuário HTTP Basic enviado em todas as requisições (criado pela migration `V3__create_initial_users.sql`) |
+
+As demais variáveis são preenchidas pelos próprios testes durante a execução.
+
+> **Atenção:** a execução grava dados de teste no banco (pessoas, restaurantes, pratos etc.). Para descartá-los, use `docker compose down -v`, que apaga o volume do banco com todos os dados.
 
 ## Diagrama Entidade-Relacionamento
 
