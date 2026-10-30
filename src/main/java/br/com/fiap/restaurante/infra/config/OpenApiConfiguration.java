@@ -6,8 +6,6 @@ import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.media.*;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
-import io.swagger.v3.oas.models.security.SecurityRequirement;
-import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,7 +18,6 @@ import java.util.Map;
 @Configuration
 public class OpenApiConfiguration {
 
-    private static final String BASIC_AUTH = "basicAuth";
     private static final String ERROR_SCHEMA = "Erro";
 
     private static final String DESCRIPTION = """
@@ -131,13 +128,7 @@ public class OpenApiConfiguration {
                 .info(new Info()
                               .title("API de Gestão de Restaurantes")
                               .version("v1")
-                              .description(DESCRIPTION))
-                .components(new Components()
-                                    .addSecuritySchemes(BASIC_AUTH, new SecurityScheme()
-                                            .type(SecurityScheme.Type.HTTP)
-                                            .scheme("basic")
-                                            .description("Login e senha de um usuário cadastrado na aplicação.")))
-                .addSecurityItem(new SecurityRequirement().addList(BASIC_AUTH));
+                              .description(DESCRIPTION));
     }
 
     /**
@@ -171,8 +162,6 @@ public class OpenApiConfiguration {
                 if (responses.containsKey("201") || responses.containsKey("204")) {
                     responses.remove("200");
                 }
-                responses.putIfAbsent("401", new ApiResponse()
-                        .description("Não autenticado: informe usuário e senha (HTTP Basic)."));
                 responses.putIfAbsent("500", new ApiResponse()
                         .description("Erro inesperado, como uma falha de acesso ao banco de dados."));
                 responses.forEach((status, response) -> {

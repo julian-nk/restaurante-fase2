@@ -8,10 +8,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
-/**
- * Todas as rotas da API exigem HTTP Basic com o login e a senha de um usuário cadastrado (ver
- * {@link br.com.fiap.restaurante.infra.security.AppUserDetailsService}); só a documentação fica aberta.
- */
 @Configuration
 public class SecurityConfig {
 
@@ -25,9 +21,23 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http)
-            throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
+        return deactivateAuthentication(http);
+    }
 
+    private SecurityFilterChain deactivateAuthentication(HttpSecurity http) {
+        http
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+
+        return http.build();
+    }
+
+    /**
+     * Todas as rotas da API exigem HTTP Basic com o login e a senha de um usuário cadastrado (ver
+     * {@link br.com.fiap.restaurante.infra.security.AppUserDetailsService}); só a documentação fica aberta.
+     */
+    private SecurityFilterChain activateAuthentication(HttpSecurity http) {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
@@ -42,7 +52,6 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults());
-
         return http.build();
     }
 }
