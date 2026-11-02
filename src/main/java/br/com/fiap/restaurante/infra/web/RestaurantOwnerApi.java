@@ -37,16 +37,20 @@ public class RestaurantOwnerApi {
     @Operation(summary = "Cadastra um dono de restaurante",
             description = "Cadastra a pessoa junto com o papel de dono. Se já existir uma pessoa com o CPF "
                     + "informado (cadastrada sem papel ou como cliente), ela passa a ser também dona, e o nome, "
-                    + "o e-mail e o endereço dela são substituídos pelos enviados.")
+                    + "o e-mail e o endereço dela são substituídos pelos enviados. "
+                    + "O usuário de acesso da pessoa recebe o tipo restaurant_owner. Se ela ainda não tem usuário, login e senha "
+                    + "são obrigatórios e o usuário é criado; se já tem, eles não podem ser enviados.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Dono de restaurante cadastrado.",
                     content = @Content(schema = @Schema(implementation = RestaurantOwnerOutputDto.class))),
             @ApiResponse(responseCode = "400", description = "Dados inválidos: algum campo obrigatório faltando ou fora do formato."),
-            @ApiResponse(responseCode = "409",
-                    description = "A pessoa já é dona de restaurante ou o e-mail pertence a outra pessoa.")
+            @ApiResponse(responseCode = "409", description = "A pessoa já é dona de restaurante; o e-mail pertence a "
+                    + "outra pessoa; o login já está em uso; a pessoa já tem usuário e foi enviado um login; ou o "
+                    + "tipo restaurant_owner não está cadastrado.")
     })
     public ResponseEntity<RestaurantOwnerOutputDto> register(@Valid @RequestBody RegisterRestaurantOwnerJson json) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(restaurantOwnerController.register(json.toInputDto()));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                             .body(restaurantOwnerController.register(json.toInputDto(), json.toLoginDto()));
     }
 
     @GetMapping
@@ -92,8 +96,9 @@ public class RestaurantOwnerApi {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Exclui um dono de restaurante",
-            description = "Remove o papel de dono, o que não é permitido enquanto ele tiver restaurantes. A pessoa "
-                    + "continua cadastrada, com os outros papéis que tiver. Para excluí-la, use DELETE /api/persons/{id}.")
+            description = "Remove o papel de dono, o que não é permitido enquanto ele tiver restaurantes, e o usuário "
+                    + "da pessoa perde o tipo restaurant_owner. A pessoa continua cadastrada, com os outros papéis que "
+                    + "tiver. Para excluí-la, use DELETE /api/persons/{id}.")
     @Parameter(in = ParameterIn.PATH, name = "id", description = "ID do dono (o mesmo da pessoa)", example = "1")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Dono de restaurante excluído."),

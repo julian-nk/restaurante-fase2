@@ -9,6 +9,8 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity, Long> {
 
     boolean existsByPersonId(Long personId);
 
+    Optional<AppUserEntity> findByPersonId(Long personId);
+
     boolean existsByLoginIgnoreCase(String login);
 
     Optional<AppUserEntity> findByLoginIgnoreCase(String login);

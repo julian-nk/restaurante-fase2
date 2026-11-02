@@ -30,7 +30,7 @@ public class CreateRestaurantUseCaseImpl implements CreateRestaurantUseCase {
     @Override
     public RestaurantOutputDto execute(CreateRestaurantInputDto input, RequesterDto requester) {
         Restaurant restaurant = restaurantFactory.create(input);
-        RestaurantAccess.requireCanManage(restaurant, requester);
+        RestaurantAccessService.requireCanManage(restaurant, requester);
 
         if (!restaurantOwnerGateway.existsById(restaurant.getOwnerId())) {
             throw new RestaurantOwnerNotFoundException(restaurant.getOwnerId());

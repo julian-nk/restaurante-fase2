@@ -2,6 +2,7 @@ package br.com.fiap.restaurante.core.controller;
 
 import br.com.fiap.restaurante.core.dto.CreateCustomerInputDto;
 import br.com.fiap.restaurante.core.dto.CustomerOutputDto;
+import br.com.fiap.restaurante.core.dto.LoginInputDto;
 import br.com.fiap.restaurante.core.dto.UpdateCustomerInputDto;
 import br.com.fiap.restaurante.core.usecase.DeleteCustomerUseCase;
 import br.com.fiap.restaurante.core.usecase.GetCustomerByIdUseCase;
@@ -33,8 +34,8 @@ public class CustomerController {
         this.deleteCustomerUseCase = deleteCustomerUseCase;
     }
 
-    public CustomerOutputDto register(CreateCustomerInputDto input) {
-        return registerCustomerUseCase.execute(input);
+    public CustomerOutputDto register(CreateCustomerInputDto input, LoginInputDto login) {
+        return registerCustomerUseCase.execute(input, login);
     }
 
     public List<CustomerOutputDto> findAll() {

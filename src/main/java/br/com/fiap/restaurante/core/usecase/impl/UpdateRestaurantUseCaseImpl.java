@@ -34,7 +34,7 @@ public class UpdateRestaurantUseCaseImpl implements UpdateRestaurantUseCase {
 
     @Override
     public RestaurantOutputDto execute(UpdateRestaurantInputDto input, RequesterDto requester) {
-        Restaurant restaurant = RestaurantAccess.findManageable(restaurantGateway, input.id(), requester);
+        Restaurant restaurant = RestaurantAccessService.findManageable(restaurantGateway, input.id(), requester);
         Long currentOwnerId = restaurant.getOwnerId();
 
         restaurant.update(input.name(), input.cuisineType(), input.ownerId());

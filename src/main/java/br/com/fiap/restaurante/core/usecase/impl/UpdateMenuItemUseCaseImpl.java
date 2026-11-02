@@ -24,7 +24,7 @@ public class UpdateMenuItemUseCaseImpl implements UpdateMenuItemUseCase {
 
         MenuItem menuItem = menuItemGateway.findById(input.id())
                                            .orElseThrow(() -> new MenuItemNotFoundException(input.id()));
-        RestaurantAccess.findManageable(restaurantGateway, menuItem.getRestaurantId(), requester);
+        RestaurantAccessService.findManageable(restaurantGateway, menuItem.getRestaurantId(), requester);
 
         menuItem.update(
                 input.name(),

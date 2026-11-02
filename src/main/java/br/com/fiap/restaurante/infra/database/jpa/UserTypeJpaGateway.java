@@ -51,6 +51,11 @@ public class UserTypeJpaGateway extends JpaGatewaySupport implements UserTypeGat
     }
 
     @Override
+    public Optional<UserType> findByCode(String code) {
+        return call(() -> userTypeRepository.findByCode(code).map(mapper::map));
+    }
+
+    @Override
     public void deleteById(Long id) {
         run(() -> userTypeRepository.deleteById(id));
     }

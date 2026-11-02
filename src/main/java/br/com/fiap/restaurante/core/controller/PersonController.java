@@ -1,6 +1,7 @@
 package br.com.fiap.restaurante.core.controller;
 
 import br.com.fiap.restaurante.core.dto.CreatePersonInputDto;
+import br.com.fiap.restaurante.core.dto.LoginInputDto;
 import br.com.fiap.restaurante.core.dto.PersonOutputDto;
 import br.com.fiap.restaurante.core.dto.UpdatePersonInputDto;
 import br.com.fiap.restaurante.core.usecase.CreatePersonUseCase;
@@ -33,8 +34,8 @@ public class PersonController {
         this.deletePersonUseCase = deletePersonUseCase;
     }
 
-    public PersonOutputDto create(CreatePersonInputDto input) {
-        return createPersonUseCase.execute(input);
+    public PersonOutputDto create(CreatePersonInputDto input, LoginInputDto login) {
+        return createPersonUseCase.execute(input, login);
     }
 
     public List<PersonOutputDto> findAll() {

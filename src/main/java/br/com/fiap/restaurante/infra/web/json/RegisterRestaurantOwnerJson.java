@@ -1,6 +1,7 @@
 package br.com.fiap.restaurante.infra.web.json;
 
 import br.com.fiap.restaurante.core.dto.CreateRestaurantOwnerInputDto;
+import br.com.fiap.restaurante.core.dto.LoginInputDto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -33,10 +34,23 @@ public record RegisterRestaurantOwnerJson(
         @Email(message = "O e-mail comercial é inválido.")
         @Size(max = 255, message = "O e-mail comercial deve ter no máximo 255 caracteres.")
         @Schema(description = "E-mail comercial.", example = "contato@cantinadanona.com.br")
-        String businessEmail
+        String businessEmail,
+        @Size(min = 3, max = 50, message = "O login deve ter entre 3 e 50 caracteres.")
+        @Schema(description = "Login do usuário de acesso, de 3 a 50 caracteres. Obrigatório quando a pessoa ainda "
+                              + "não tem usuário (CPF novo); não pode ser enviado quando ela já tem.",
+                example = "maria.silva")
+        String login,
+        @Schema(description = "Senha do usuário: de 8 a 72 caracteres, com letras e números. Vai junto com o "
+                              + "login, nas mesmas condições. É guardada como hash.",
+                example = "senha1234")
+        String password
 ) {
 
     public CreateRestaurantOwnerInputDto toInputDto() {
         return new CreateRestaurantOwnerInputDto(name, email, cpf, AddressJson.toInputDto(address), businessEmail);
+    }
+
+    public LoginInputDto toLoginDto() {
+        return new LoginInputDto(login, password);
     }
 }

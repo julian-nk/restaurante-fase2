@@ -8,6 +8,7 @@ import br.com.fiap.restaurante.core.usecase.*;
 import br.com.fiap.restaurante.core.usecase.impl.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 public class DependencyInjectionConfiguration {
@@ -199,14 +200,18 @@ public class DependencyInjectionConfiguration {
 
     // ---------- Usuários ----------
 
+    /**
+     * Cria o usuário de acesso de quem é cadastrado e dá ou tira os tipos dos papéis. Usado pelos cadastros de
+     * pessoa, cliente e dono, e pela remoção dos papéis.
+     */
     @Bean
-    public CreateAppUserUseCase createAppUserUseCase(
+    public PersonAppUserService personAppUserService(
             AppUserGateway appUserGateway,
-            PersonGateway personGateway,
+            UserTypeGateway userTypeGateway,
             PasswordEncoderGateway passwordEncoder,
-            AppUserFactory factory
+            AppUserFactory appUserFactory
     ) {
-        return new CreateAppUserUseCaseImpl(appUserGateway, personGateway, passwordEncoder, factory);
+        return new PersonAppUserService(appUserGateway, userTypeGateway, passwordEncoder, appUserFactory);
     }
 
     @Bean
@@ -234,14 +239,12 @@ public class DependencyInjectionConfiguration {
 
     @Bean
     public AppUserController appUserController(
-            CreateAppUserUseCase createAppUserUseCase,
             GetAppUsersUseCase getAppUsersUseCase,
             GetAppUserByIdUseCase getAppUserByIdUseCase,
             ChangeAppUserPasswordUseCase changeAppUserPasswordUseCase,
             DeleteAppUserUseCase deleteAppUserUseCase
     ) {
         return new AppUserController(
-                createAppUserUseCase,
                 getAppUsersUseCase,
                 getAppUserByIdUseCase,
                 changeAppUserPasswordUseCase,
@@ -252,8 +255,14 @@ public class DependencyInjectionConfiguration {
     // ---------- Pessoas ----------
 
     @Bean
-    public CreatePersonUseCase createPersonUseCase(PersonGateway personGateway, PersonFactory factory) {
-        return new CreatePersonUseCaseImpl(personGateway, factory);
+    public CreatePersonUseCase createPersonUseCase(
+            PersonGateway personGateway,
+            PersonFactory factory,
+            PersonAppUserService personAppUserService,
+            PlatformTransactionManager transactionManager
+    ) {
+        return TransactionalUseCases.wrap(CreatePersonUseCase.class,
+                new CreatePersonUseCaseImpl(personGateway, factory, personAppUserService), transactionManager);
     }
 
     @Bean
@@ -299,9 +308,13 @@ public class DependencyInjectionConfiguration {
     public RegisterCustomerUseCase registerCustomerUseCase(
             CustomerGateway customerGateway,
             PersonGateway personGateway,
-            CustomerFactory factory
+            CustomerFactory factory,
+            RestaurantOwnerGateway restaurantOwnerGateway,
+            PersonAppUserService personAppUserService,
+            PlatformTransactionManager transactionManager
     ) {
-        return new RegisterCustomerUseCaseImpl(customerGateway, personGateway, factory);
+        return TransactionalUseCases.wrap(RegisterCustomerUseCase.class, new RegisterCustomerUseCaseImpl(
+                customerGateway, personGateway, factory, restaurantOwnerGateway, personAppUserService), transactionManager);
     }
 
     @Bean
@@ -324,8 +337,13 @@ public class DependencyInjectionConfiguration {
     }
 
     @Bean
-    public DeleteCustomerUseCase deleteCustomerUseCase(CustomerGateway gateway) {
-        return new DeleteCustomerUseCaseImpl(gateway);
+    public DeleteCustomerUseCase deleteCustomerUseCase(
+            CustomerGateway gateway,
+            PersonAppUserService personAppUserService,
+            PlatformTransactionManager transactionManager
+    ) {
+        return TransactionalUseCases.wrap(DeleteCustomerUseCase.class,
+                new DeleteCustomerUseCaseImpl(gateway, personAppUserService), transactionManager);
     }
 
     @Bean
@@ -351,9 +369,13 @@ public class DependencyInjectionConfiguration {
     public RegisterRestaurantOwnerUseCase registerRestaurantOwnerUseCase(
             RestaurantOwnerGateway restaurantOwnerGateway,
             PersonGateway personGateway,
-            RestaurantOwnerFactory factory
+            RestaurantOwnerFactory factory,
+            CustomerGateway customerGateway,
+            PersonAppUserService personAppUserService,
+            PlatformTransactionManager transactionManager
     ) {
-        return new RegisterRestaurantOwnerUseCaseImpl(restaurantOwnerGateway, personGateway, factory);
+        return TransactionalUseCases.wrap(RegisterRestaurantOwnerUseCase.class, new RegisterRestaurantOwnerUseCaseImpl(
+                restaurantOwnerGateway, personGateway, factory, customerGateway, personAppUserService), transactionManager);
     }
 
     @Bean
@@ -378,9 +400,12 @@ public class DependencyInjectionConfiguration {
     @Bean
     public DeleteRestaurantOwnerUseCase deleteRestaurantOwnerUseCase(
             RestaurantOwnerGateway restaurantOwnerGateway,
-            RestaurantGateway restaurantGateway
+            RestaurantGateway restaurantGateway,
+            PersonAppUserService personAppUserService,
+            PlatformTransactionManager transactionManager
     ) {
-        return new DeleteRestaurantOwnerUseCaseImpl(restaurantOwnerGateway, restaurantGateway);
+        return TransactionalUseCases.wrap(DeleteRestaurantOwnerUseCase.class, new DeleteRestaurantOwnerUseCaseImpl(
+                restaurantOwnerGateway, restaurantGateway, personAppUserService), transactionManager);
     }
 
     @Bean

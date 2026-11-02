@@ -7,6 +7,9 @@ import lombok.Getter;
 @Getter
 public class UserType {
 
+    public static final String CUSTOMER_CODE = UserTypeEnum.CUSTOMER.getCode();
+    public static final String RESTAURANT_OWNER_CODE = UserTypeEnum.RESTAURANT_OWNER.getCode();
+
     static final int NAME_MAX_LENGTH = 50;
     static final int CODE_MAX_LENGTH = 30;
 

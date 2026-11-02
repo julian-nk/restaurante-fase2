@@ -4,7 +4,6 @@ import br.com.fiap.restaurante.core.controller.AppUserController;
 import br.com.fiap.restaurante.core.dto.AppUserOutputDto;
 import br.com.fiap.restaurante.infra.security.AppUserPrincipal;
 import br.com.fiap.restaurante.infra.web.json.ChangePasswordJson;
-import br.com.fiap.restaurante.infra.web.json.CreateAppUserJson;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -15,7 +14,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +21,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @Tag(name = "Usuários",
-        description = "Usuários de acesso ao sistema. Cada pessoa pode ter um único usuário.")
+        description = "Usuários de acesso ao sistema. Cada pessoa tem um único usuário, criado junto com ela no "
+                + "cadastro de pessoa, de cliente ou de dono de restaurante.")
 @RestController
 @RequestMapping("/api/app-users")
 public class AppUserApi {
@@ -32,21 +31,6 @@ public class AppUserApi {
 
     public AppUserApi(AppUserController appUserController) {
         this.appUserController = appUserController;
-    }
-
-    @PostMapping
-    @Operation(summary = "Cria o usuário de uma pessoa",
-            description = "A senha é guardada como hash e nunca é devolvida pela API.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Usuário criado.",
-                    content = @Content(schema = @Schema(implementation = AppUserOutputDto.class))),
-            @ApiResponse(responseCode = "400", description = "Dados inválidos ou senha fora da política (de 8 a 72 caracteres, com letras e "
-                        + "números)."),
-            @ApiResponse(responseCode = "404", description = "Pessoa não encontrada."),
-            @ApiResponse(responseCode = "409", description = "O login já está em uso ou a pessoa já tem um usuário.")
-    })
-    public ResponseEntity<AppUserOutputDto> create(@Valid @RequestBody CreateAppUserJson json) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(appUserController.create(json.toInputDto()));
     }
 
     @GetMapping

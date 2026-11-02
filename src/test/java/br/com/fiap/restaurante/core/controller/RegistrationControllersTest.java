@@ -14,22 +14,18 @@ class RegistrationControllersTest {
 
     @Test
     void appUserControllerShouldDelegateToUseCases() {
-        var create = mock(CreateAppUserUseCase.class);
         var getAll = mock(GetAppUsersUseCase.class);
         var getById = mock(GetAppUserByIdUseCase.class);
         var changePassword = mock(ChangeAppUserPasswordUseCase.class);
         var delete = mock(DeleteAppUserUseCase.class);
-        var controller = new AppUserController(create, getAll, getById, changePassword, delete);
+        var controller = new AppUserController(getAll, getById, changePassword, delete);
 
         var output = new AppUserOutputDto(1L, 10L, "maria");
-        var createInput = new CreateAppUserInputDto(10L, "maria", "senhaForte1");
         var passwordInput = new ChangePasswordInputDto(1L, "senhaForte1", "senhaNova2");
         var maria = new RequesterDto(10L, false);
-        when(create.execute(createInput)).thenReturn(output);
         when(getAll.execute()).thenReturn(List.of(output));
         when(getById.execute(1L)).thenReturn(output);
 
-        assertSame(output, controller.create(createInput));
         assertEquals(List.of(output), controller.findAll());
         assertSame(output, controller.findById(1L));
         controller.changePassword(passwordInput, maria);
@@ -49,13 +45,14 @@ class RegistrationControllersTest {
 
         var output = new PersonOutputDto(5L, "Ana", "ana@email.com", "39053344705", null);
         var createInput = new CreatePersonInputDto("Ana", "ana@email.com", "39053344705", null);
+        var login = new LoginInputDto("ana", "senha1234");
         var updateInput = new UpdatePersonInputDto(5L, "Ana", "ana@email.com", null);
-        when(create.execute(createInput)).thenReturn(output);
+        when(create.execute(createInput, login)).thenReturn(output);
         when(getAll.execute()).thenReturn(List.of(output));
         when(getById.execute(5L)).thenReturn(output);
         when(update.execute(updateInput)).thenReturn(output);
 
-        assertSame(output, controller.create(createInput));
+        assertSame(output, controller.create(createInput, login));
         assertEquals(List.of(output), controller.findAll());
         assertSame(output, controller.findById(5L));
         assertSame(output, controller.update(updateInput));
@@ -74,13 +71,14 @@ class RegistrationControllersTest {
 
         var output = new CustomerOutputDto(5L, "Maria", "maria@email.com", "52998224725", null, OffsetDateTime.now());
         var registerInput = new CreateCustomerInputDto("Maria", "maria@email.com", "52998224725", null);
+        var login = new LoginInputDto("maria", "senha1234");
         var updateInput = new UpdateCustomerInputDto(5L, "Maria", "maria@email.com", null);
-        when(register.execute(registerInput)).thenReturn(output);
+        when(register.execute(registerInput, login)).thenReturn(output);
         when(getAll.execute()).thenReturn(List.of(output));
         when(getById.execute(5L)).thenReturn(output);
         when(update.execute(updateInput)).thenReturn(output);
 
-        assertSame(output, controller.register(registerInput));
+        assertSame(output, controller.register(registerInput, login));
         assertEquals(List.of(output), controller.findAll());
         assertSame(output, controller.findById(5L));
         assertSame(output, controller.update(updateInput));
@@ -102,13 +100,14 @@ class RegistrationControllersTest {
                 List.of());
         var registerInput = new CreateRestaurantOwnerInputDto(
                 "Maria", "maria@email.com", "52998224725", null, "contato@cantina.com");
+        var login = new LoginInputDto("maria", "senha1234");
         var updateInput = new UpdateRestaurantOwnerInputDto(5L, "Maria", "maria@email.com", null, "contato@cantina.com");
-        when(register.execute(registerInput)).thenReturn(output);
+        when(register.execute(registerInput, login)).thenReturn(output);
         when(getAll.execute()).thenReturn(List.of(output));
         when(getById.execute(5L)).thenReturn(output);
         when(update.execute(updateInput)).thenReturn(output);
 
-        assertSame(output, controller.register(registerInput));
+        assertSame(output, controller.register(registerInput, login));
         assertEquals(List.of(output), controller.findAll());
         assertSame(output, controller.findById(5L));
         assertSame(output, controller.update(updateInput));

@@ -1,5 +1,6 @@
 package br.com.fiap.restaurante.infra.security;
 
+import br.com.fiap.restaurante.core.domain.UserTypeEnum;
 import br.com.fiap.restaurante.core.dto.RequesterDto;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;

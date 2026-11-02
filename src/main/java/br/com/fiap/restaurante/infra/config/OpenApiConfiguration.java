@@ -2,7 +2,7 @@ package br.com.fiap.restaurante.infra.config;
 
 import br.com.fiap.restaurante.infra.security.ApiAccessRules;
 import br.com.fiap.restaurante.infra.security.Rule;
-import br.com.fiap.restaurante.infra.security.UserTypeEnum;
+import br.com.fiap.restaurante.core.domain.UserTypeEnum;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;

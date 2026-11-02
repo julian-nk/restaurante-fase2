@@ -4,6 +4,7 @@ import br.com.fiap.restaurante.core.domain.Person;
 import br.com.fiap.restaurante.core.domain.StatesEnum;
 import br.com.fiap.restaurante.core.dto.AddressInputDto;
 import br.com.fiap.restaurante.core.dto.CreatePersonInputDto;
+import br.com.fiap.restaurante.core.dto.LoginInputDto;
 import br.com.fiap.restaurante.core.dto.PersonOutputDto;
 import br.com.fiap.restaurante.core.dto.UpdatePersonInputDto;
 import br.com.fiap.restaurante.core.exception.CpfAlreadyRegisteredException;
@@ -16,13 +17,16 @@ import br.com.fiap.restaurante.core.factory.impl.PersonFactoryImpl;
 import br.com.fiap.restaurante.core.gateway.PersonGateway;
 import br.com.fiap.restaurante.core.gateway.RestaurantGateway;
 import br.com.fiap.restaurante.core.usecase.impl.*;
+import br.com.fiap.restaurante.core.usecase.impl.PersonAppUserService.PendingAppUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,6 +35,7 @@ import static org.mockito.Mockito.*;
 class PersonUseCasesTest {
 
     private static final String CPF = "39053344705";
+    private static final LoginInputDto LOGIN = new LoginInputDto("ana", "senha1234");
     private static final AddressInputDto ADDRESS = new AddressInputDto(
             "Av. Paulista", "1000", null, "Bela Vista", "São Paulo", StatesEnum.SP, "01310-100");
 
@@ -39,11 +44,16 @@ class PersonUseCasesTest {
 
     private PersonGateway personGateway;
     private RestaurantGateway restaurantGateway;
+    private PersonAppUserService appUserService;
+    private PendingAppUser pendingAppUser;
 
     @BeforeEach
     void setUp() {
         personGateway = mock(PersonGateway.class);
         restaurantGateway = mock(RestaurantGateway.class);
+        appUserService = mock(PersonAppUserService.class);
+        pendingAppUser = mock(PendingAppUser.class);
+        when(appUserService.prepare(any(), any(), any())).thenReturn(pendingAppUser);
         when(personGateway.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -58,12 +68,12 @@ class PersonUseCasesTest {
         private final CreatePersonInputDto input = new CreatePersonInputDto("Ana", "ana@email.com", CPF, ADDRESS);
 
         private CreatePersonUseCaseImpl create() {
-            return new CreatePersonUseCaseImpl(personGateway, personFactory);
+            return new CreatePersonUseCaseImpl(personGateway, personFactory, appUserService);
         }
 
         @Test
         void shouldCreatePersonWithoutRole() {
-            PersonOutputDto output = create().execute(input);
+            PersonOutputDto output = create().execute(input, LOGIN);
 
             ArgumentCaptor<Person> saved = ArgumentCaptor.forClass(Person.class);
             verify(personGateway).save(saved.capture());
@@ -75,9 +85,28 @@ class PersonUseCasesTest {
         }
 
         @Test
+        void shouldCreateTheUserOfThePersonWithoutUserTypes() {
+            create().execute(input, LOGIN);
+
+            // o login é conferido antes de gravar a pessoa, e o usuário é gravado depois, com o ID dela
+            InOrder order = inOrder(appUserService, personGateway, pendingAppUser);
+            order.verify(appUserService).prepare(null, LOGIN, Set.of());
+            order.verify(personGateway).save(any());
+            order.verify(pendingAppUser).save(any());
+        }
+
+        @Test
+        void shouldNotSavePersonWhenTheLoginIsRefused() {
+            when(appUserService.prepare(any(), any(), any())).thenThrow(new InvalidFieldException("O login é obrigatório."));
+
+            assertThrows(InvalidFieldException.class, () -> create().execute(input, null));
+            verify(personGateway, never()).save(any());
+        }
+
+        @Test
         void shouldLookForTheCpfWithoutPunctuation() {
             PersonOutputDto output = create().execute(
-                    new CreatePersonInputDto("Ana", "ana@email.com", "390.533.447-05", null));
+                    new CreatePersonInputDto("Ana", "ana@email.com", "390.533.447-05", null), LOGIN);
 
             assertEquals(CPF, output.cpf());
             assertNull(output.address());
@@ -88,7 +117,7 @@ class PersonUseCasesTest {
         void shouldRejectCpfOfAnotherPerson() {
             when(personGateway.findIdByCpf(CPF)).thenReturn(Optional.of(7L));
 
-            assertThrows(CpfAlreadyRegisteredException.class, () -> create().execute(input));
+            assertThrows(CpfAlreadyRegisteredException.class, () -> create().execute(input, LOGIN));
             verify(personGateway, never()).save(any());
         }
 
@@ -96,14 +125,14 @@ class PersonUseCasesTest {
         void shouldRejectEmailOfAnotherPerson() {
             when(personGateway.isEmailUsedByAnotherPerson("ana@email.com", null)).thenReturn(true);
 
-            assertThrows(EmailAlreadyRegisteredException.class, () -> create().execute(input));
+            assertThrows(EmailAlreadyRegisteredException.class, () -> create().execute(input, LOGIN));
             verify(personGateway, never()).save(any());
         }
 
         @Test
         void shouldRejectInvalidCpfBeforeLookingForThePerson() {
             assertThrows(InvalidFieldException.class, () -> create().execute(
-                    new CreatePersonInputDto("Ana", "ana@email.com", "390.533", null)));
+                    new CreatePersonInputDto("Ana", "ana@email.com", "390.533", null), LOGIN));
             verify(personGateway, never()).findIdByCpf(any());
             verify(personGateway, never()).save(any());
         }

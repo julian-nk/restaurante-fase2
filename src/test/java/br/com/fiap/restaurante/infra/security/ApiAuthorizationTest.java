@@ -1,5 +1,6 @@
 package br.com.fiap.restaurante.infra.security;
 
+import br.com.fiap.restaurante.core.domain.UserTypeEnum;
 import br.com.fiap.restaurante.infra.database.jpa.entity.AppUserEntity;
 import br.com.fiap.restaurante.infra.database.jpa.entity.AppUserTypeEntity;
 import br.com.fiap.restaurante.infra.database.jpa.entity.UserTypeEntity;

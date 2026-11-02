@@ -19,5 +19,7 @@ public interface UserTypeGateway {
 
     boolean existsByCode(String code);
 
+    Optional<UserType> findByCode(String code);
+
     void deleteById(Long id);
 }

@@ -1,6 +1,7 @@
 package br.com.fiap.restaurante.core.controller;
 
 import br.com.fiap.restaurante.core.dto.CreateRestaurantOwnerInputDto;
+import br.com.fiap.restaurante.core.dto.LoginInputDto;
 import br.com.fiap.restaurante.core.dto.RestaurantOwnerOutputDto;
 import br.com.fiap.restaurante.core.dto.UpdateRestaurantOwnerInputDto;
 import br.com.fiap.restaurante.core.usecase.DeleteRestaurantOwnerUseCase;
@@ -33,8 +34,8 @@ public class RestaurantOwnerController {
         this.deleteRestaurantOwnerUseCase = deleteRestaurantOwnerUseCase;
     }
 
-    public RestaurantOwnerOutputDto register(CreateRestaurantOwnerInputDto input) {
-        return registerRestaurantOwnerUseCase.execute(input);
+    public RestaurantOwnerOutputDto register(CreateRestaurantOwnerInputDto input, LoginInputDto login) {
+        return registerRestaurantOwnerUseCase.execute(input, login);
     }
 
     public List<RestaurantOwnerOutputDto> findAll() {

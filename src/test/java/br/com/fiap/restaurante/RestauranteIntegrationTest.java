@@ -2,11 +2,13 @@ package br.com.fiap.restaurante;
 
 import br.com.fiap.restaurante.core.controller.*;
 import br.com.fiap.restaurante.core.domain.StatesEnum;
+import br.com.fiap.restaurante.core.domain.UserType;
 import br.com.fiap.restaurante.core.dto.*;
 import br.com.fiap.restaurante.core.exception.*;
 import br.com.fiap.restaurante.infra.database.jpa.repository.AddressRepository;
 import br.com.fiap.restaurante.infra.database.jpa.repository.PersonRepository;
 import br.com.fiap.restaurante.infra.database.jpa.repository.UserTypeRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -67,6 +69,34 @@ class RestauranteIntegrationTest {
         return new OpeningHoursInputDto(day, LocalTime.of(opening, 0), LocalTime.of(closing, 0));
     }
 
+    /** Login e senha do usuário de acesso que nasce junto com a pessoa. */
+    private static LoginInputDto login(String login) {
+        return new LoginInputDto(login, "senhaForte1");
+    }
+
+    /** Nos testes o Flyway não roda, então os tipos dos papéis, que a migration V2 cadastra, são criados aqui. */
+    @BeforeEach
+    void createRoleUserTypes() {
+        for (String code : List.of(UserType.CUSTOMER_CODE, UserType.RESTAURANT_OWNER_CODE)) {
+            if (!userTypeRepository.existsByCode(code)) {
+                userTypeController.create(new CreateUserTypeInputDto(code, code));
+            }
+        }
+    }
+
+    private AppUserOutputDto userOf(Long personId) {
+        return appUserController.findAll().stream()
+                                .filter(user -> user.personId().equals(personId))
+                                .findFirst()
+                                .orElseThrow();
+    }
+
+    private List<String> userTypeCodesOf(Long personId) {
+        return appUserTypeController.findUserTypes(userOf(personId).id()).stream()
+                                    .map(UserTypeOutputDto::code)
+                                    .toList();
+    }
+
     /** O próprio dono do restaurante, chamando os casos de uso. */
     private static RequesterDto ownerOf(RestaurantOutputDto restaurant) {
         return new RequesterDto(restaurant.ownerId(), false);
@@ -75,7 +105,7 @@ class RestauranteIntegrationTest {
     /** Cadastra o dono (com os dados da pessoa) e um restaurante dele, feito pelo próprio dono. */
     private RestaurantOutputDto createRestaurant(String cpf, String cnpj) {
         RestaurantOwnerOutputDto owner = restaurantOwnerController.register(new CreateRestaurantOwnerInputDto(
-                "Dono " + cpf, cpf + "@email.com", cpf, null, "contato" + cpf + "@cantina.com"));
+                "Dono " + cpf, cpf + "@email.com", cpf, null, "contato" + cpf + "@cantina.com"), login("dono" + cpf));
 
         return restaurantController.create(new CreateRestaurantInputDto("Cantina", cnpj, "Italiana", owner.id(),
                 ADDRESS, List.of(hours(DayOfWeek.MONDAY, 11, 15), hours(DayOfWeek.FRIDAY, 18, 2))),
@@ -139,16 +169,23 @@ class RestauranteIntegrationTest {
     @Test
     void shouldManageBothRolesOfTheSamePerson() {
         CustomerOutputDto customer = customerController.register(
-                new CreateCustomerInputDto("Maria", "maria@email.com", "12345678901", ADDRESS));
+                new CreateCustomerInputDto("Maria", "maria@email.com", "12345678901", ADDRESS), login("maria"));
         Long personId = customer.id();
         Long addressId = customer.address().id();
         assertTrue(addressRepository.existsById(addressId));
+        assertEquals(List.of("customer"), userTypeCodesOf(personId));
         assertThrows(CustomerAlreadyRegisteredException.class, () -> customerController.register(
-                new CreateCustomerInputDto("Maria", "maria@email.com", "12345678901", ADDRESS)));
+                new CreateCustomerInputDto("Maria", "maria@email.com", "12345678901", ADDRESS), null));
+
+        // a pessoa já tem usuário, então o cadastro do outro papel não pode trazer outro login
+        CreateRestaurantOwnerInputDto ownerInput = new CreateRestaurantOwnerInputDto(
+                "Maria Souza", "maria.souza@email.com", "123.456.789-01", null, "contato@cantinadamaria.com");
+        assertThrows(PersonAlreadyHasUserException.class,
+                () -> restaurantOwnerController.register(ownerInput, login("maria2")));
 
         // mesmo CPF, agora com pontuação, a pessoa é reaproveitada e os dados enviados substituem os gravados
-        RestaurantOwnerOutputDto owner = restaurantOwnerController.register(new CreateRestaurantOwnerInputDto(
-                "Maria Souza", "maria.souza@email.com", "123.456.789-01", null, "contato@cantinadamaria.com"));
+        RestaurantOwnerOutputDto owner = restaurantOwnerController.register(ownerInput, null);
+        assertEquals(List.of("customer", "restaurant_owner"), userTypeCodesOf(personId));
         assertEquals("12345678901", owner.cpf());
         assertEquals(personId, owner.id());
         assertEquals("Maria Souza", customerController.findById(personId).name());
@@ -156,26 +193,27 @@ class RestauranteIntegrationTest {
         assertFalse(addressRepository.existsById(addressId));
 
         assertThrows(EmailAlreadyRegisteredException.class, () -> customerController.register(
-                new CreateCustomerInputDto("Outra", "maria.souza@email.com", "98765432100", null)));
+                new CreateCustomerInputDto("Outra", "maria.souza@email.com", "98765432100", null), login("outra")));
 
         CustomerOutputDto updated = customerController.update(
                 new UpdateCustomerInputDto(personId, "Maria Souza", "maria.souza@email.com", ADDRESS));
         assertEquals("Av. Paulista", updated.address().street());
         assertEquals("Av. Paulista", restaurantOwnerController.findById(personId).address().street());
 
-        AppUserOutputDto user = appUserController.create(new CreateAppUserInputDto(personId, "maria", "senhaForte1"));
+        AppUserOutputDto user = userOf(personId);
+        assertEquals("maria", user.login());
         RequesterDto maria = new RequesterDto(personId, false);
         appUserController.changePassword(new ChangePasswordInputDto(user.id(), "senhaForte1", "senhaNova2"), maria);
         assertThrows(InvalidPasswordException.class, () -> appUserController.changePassword(
                 new ChangePasswordInputDto(user.id(), "senhaForte1", "outraSenha3"), maria));
-        assertThrows(PersonAlreadyHasUserException.class, () -> appUserController.create(
-                new CreateAppUserInputDto(personId, "maria2", "senhaForte1")));
 
-        // remover um papel não apaga a pessoa, nem quando era o último
+        // remover um papel não apaga a pessoa, nem quando era o último, mas o usuário perde o tipo do papel
         customerController.delete(personId);
         assertThrows(CustomerNotFoundException.class, () -> customerController.findById(personId));
+        assertEquals(List.of("restaurant_owner"), userTypeCodesOf(personId));
         restaurantOwnerController.delete(personId);
         assertThrows(RestaurantOwnerNotFoundException.class, () -> restaurantOwnerController.findById(personId));
+        assertTrue(userTypeCodesOf(personId).isEmpty());
         assertEquals("Maria Souza", personController.findById(personId).name());
         assertEquals("Av. Paulista", personController.findById(personId).address().street());
     }
@@ -183,15 +221,22 @@ class RestauranteIntegrationTest {
     @Test
     void shouldManagePersonWithoutRoleThroughAllLayers() {
         PersonOutputDto created = personController.create(
-                new CreatePersonInputDto("Ana", "ana@email.com", "390.533.447-05", ADDRESS));
+                new CreatePersonInputDto("Ana", "ana@email.com", "390.533.447-05", ADDRESS), login("ana"));
         Long personId = created.id();
         Long addressId = created.address().id();
         assertEquals("39053344705", created.cpf());
         assertTrue(personController.findAll().stream().anyMatch(person -> person.id().equals(personId)));
+        assertEquals("ana", userOf(personId).login());
+        assertTrue(userTypeCodesOf(personId).isEmpty());
         assertThrows(CpfAlreadyRegisteredException.class, () -> personController.create(
-                new CreatePersonInputDto("Outra", "outra@email.com", "39053344705", null)));
+                new CreatePersonInputDto("Outra", "outra@email.com", "39053344705", null), login("outra")));
         assertThrows(EmailAlreadyRegisteredException.class, () -> personController.create(
-                new CreatePersonInputDto("Outra", "ANA@email.com", "11144477735", null)));
+                new CreatePersonInputDto("Outra", "ANA@email.com", "11144477735", null), login("outra")));
+        assertThrows(LoginAlreadyInUseException.class, () -> personController.create(
+                new CreatePersonInputDto("Outra", "outra@email.com", "11144477735", null), login("ANA")));
+        assertThrows(InvalidFieldException.class, () -> personController.create(
+                new CreatePersonInputDto("Outra", "outra@email.com", "11144477735", null), null));
+        assertFalse(personController.findAll().stream().anyMatch(person -> person.cpf().equals("11144477735")));
 
         PersonOutputDto updated = personController.update(
                 new UpdatePersonInputDto(personId, "Ana Pereira", "ana.pereira@email.com", null));
@@ -201,10 +246,12 @@ class RestauranteIntegrationTest {
 
         // a pessoa já existe, então o cadastro de cliente com o mesmo CPF só dá o papel a ela
         CustomerOutputDto customer = customerController.register(
-                new CreateCustomerInputDto("Ana Pereira", "ana.pereira@email.com", "39053344705", null));
+                new CreateCustomerInputDto("Ana Pereira", "ana.pereira@email.com", "39053344705", null), null);
         assertEquals(personId, customer.id());
+        assertEquals(List.of("customer"), userTypeCodesOf(personId));
 
         customerController.delete(personId);
+        assertTrue(userTypeCodesOf(personId).isEmpty());
         assertTrue(personRepository.existsById(personId));
 
         personController.delete(personId);
@@ -223,8 +270,8 @@ class RestauranteIntegrationTest {
     @Test
     void shouldManageTheTypesOfAnAppUserThroughAllLayers() {
         Long personId = personController.create(
-                new CreatePersonInputDto("Admin", "admin@email.com", "12345678909", null)).id();
-        Long userId = appUserController.create(new CreateAppUserInputDto(personId, "admin", "senhaForte1")).id();
+                new CreatePersonInputDto("Admin", "admin@email.com", "12345678909", null), login("admin")).id();
+        Long userId = userOf(personId).id();
         Long admin = userTypeController.create(new CreateUserTypeInputDto("Administrador", "integration_admin_type")).id();
         Long staff = userTypeController.create(new CreateUserTypeInputDto("Funcionário", "integration_staff")).id();
 

@@ -36,15 +36,20 @@ public class CustomerApi {
     @Operation(summary = "Cadastra um cliente",
             description = "Cadastra a pessoa junto com o papel de cliente. Se já existir uma pessoa com o CPF "
                     + "informado (cadastrada sem papel ou como dona de restaurante), ela passa a ser também "
-                    + "cliente, e o nome, o e-mail e o endereço dela são substituídos pelos enviados.")
+                    + "cliente, e o nome, o e-mail e o endereço dela são substituídos pelos enviados. "
+                    + "O usuário de acesso da pessoa recebe o tipo customer. Se ela ainda não tem usuário, login e senha "
+                    + "são obrigatórios e o usuário é criado; se já tem, eles não podem ser enviados.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Cliente cadastrado.",
                     content = @Content(schema = @Schema(implementation = CustomerOutputDto.class))),
             @ApiResponse(responseCode = "400", description = "Dados inválidos: algum campo obrigatório faltando ou fora do formato."),
-            @ApiResponse(responseCode = "409", description = "A pessoa já é cliente ou o e-mail pertence a outra pessoa.")
+            @ApiResponse(responseCode = "409", description = "A pessoa já é cliente; o e-mail pertence a outra "
+                    + "pessoa; o login já está em uso; a pessoa já tem usuário e foi enviado um login; ou o tipo "
+                    + "customer não está cadastrado.")
     })
     public ResponseEntity<CustomerOutputDto> register(@Valid @RequestBody RegisterCustomerJson json) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(customerController.register(json.toInputDto()));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                             .body(customerController.register(json.toInputDto(), json.toLoginDto()));
     }
 
     @GetMapping
@@ -87,8 +92,8 @@ public class CustomerApi {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Exclui um cliente",
-            description = "Remove só o papel de cliente: a pessoa continua cadastrada, com os outros papéis que "
-                    + "tiver. Para excluir a pessoa, use DELETE /api/persons/{id}.")
+            description = "Remove só o papel de cliente, e o usuário da pessoa perde o tipo customer. A pessoa "
+                    + "continua cadastrada, com os outros papéis que tiver. Para excluí-la, use DELETE /api/persons/{id}.")
     @Parameter(in = ParameterIn.PATH, name = "id", description = "ID do cliente (o mesmo da pessoa)", example = "1")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Cliente excluído."),

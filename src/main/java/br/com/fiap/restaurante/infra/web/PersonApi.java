@@ -35,16 +35,19 @@ public class PersonApi {
 
     @PostMapping
     @Operation(summary = "Cadastra uma pessoa",
-            description = "Cadastra a pessoa sem nenhum papel. Para que ela passe a ser cliente ou dona de "
-                    + "restaurante, use o cadastro do papel com o mesmo CPF.")
+            description = "Cadastra a pessoa sem nenhum papel, junto com o usuário de acesso dela: login e senha "
+                    + "são obrigatórios. Para que ela passe a ser cliente ou dona de restaurante, use o cadastro do "
+                    + "papel com o mesmo CPF.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Pessoa cadastrada.",
                     content = @Content(schema = @Schema(implementation = PersonOutputDto.class))),
             @ApiResponse(responseCode = "400", description = "Dados inválidos: algum campo obrigatório faltando ou fora do formato."),
-            @ApiResponse(responseCode = "409", description = "O CPF ou o e-mail já pertence a outra pessoa.")
+            @ApiResponse(responseCode = "409", description = "O CPF ou o e-mail já pertence a outra pessoa, ou o "
+                    + "login já está em uso.")
     })
     public ResponseEntity<PersonOutputDto> create(@Valid @RequestBody CreatePersonJson json) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(personController.create(json.toInputDto()));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                             .body(personController.create(json.toInputDto(), json.toLoginDto()));
     }
 
     @GetMapping

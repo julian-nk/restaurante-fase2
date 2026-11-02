@@ -15,7 +15,7 @@ public class DeleteRestaurantUseCaseImpl implements DeleteRestaurantUseCase {
 
     @Override
     public void execute(Long id, RequesterDto requester) {
-        RestaurantAccess.findManageable(restaurantGateway, id, requester);
+        RestaurantAccessService.findManageable(restaurantGateway, id, requester);
         restaurantGateway.deleteById(id);
     }
 }

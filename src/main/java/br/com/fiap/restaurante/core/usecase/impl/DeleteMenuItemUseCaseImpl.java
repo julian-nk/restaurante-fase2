@@ -22,7 +22,7 @@ public class DeleteMenuItemUseCaseImpl implements DeleteMenuItemUseCase {
 
         MenuItem menuItem = menuItemGateway.findById(id)
                                            .orElseThrow(() -> new MenuItemNotFoundException(id));
-        RestaurantAccess.findManageable(restaurantGateway, menuItem.getRestaurantId(), requester);
+        RestaurantAccessService.findManageable(restaurantGateway, menuItem.getRestaurantId(), requester);
 
         menuItemGateway.deleteById(id);
     }

@@ -17,6 +17,9 @@ public interface AppUserGateway {
 
     boolean existsByPersonId(Long personId);
 
+    /** O usuário da pessoa. Cada pessoa tem no máximo um. */
+    Optional<AppUser> findByPersonId(Long personId);
+
     boolean existsByLogin(String login);
 
     void deleteById(Long id);

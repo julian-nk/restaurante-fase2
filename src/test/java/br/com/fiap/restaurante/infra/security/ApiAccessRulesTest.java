@@ -1,5 +1,6 @@
 package br.com.fiap.restaurante.infra.security;
 
+import br.com.fiap.restaurante.core.domain.UserTypeEnum;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 

@@ -110,6 +110,13 @@ public class AppUserJpaGateway extends JpaGatewaySupport implements AppUserGatew
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<AppUser> findByPersonId(Long personId) {
+        return call(() -> appUserRepository.findByPersonId(personId)
+                .map(entity -> mapper.map(entity, userTypeIdsOf(appUserTypeRepository.findByAppUserId(entity.getId())))));
+    }
+
+    @Override
     public boolean existsByLogin(String login) {
         return call(() -> appUserRepository.existsByLoginIgnoreCase(login));
     }

@@ -43,7 +43,7 @@ docker compose up -d --build
 
 - O `--build` compila o projeto dentro da imagem com `mvnw clean package -DskipTests` (os testes não rodam nesse build). A primeira execução é mais lenta porque baixa as dependências do Maven; as seguintes reaproveitam o cache.
 - O `backend` só é iniciado depois que o banco passa no healthcheck, o que leva cerca de um minuto na primeira subida.
-- Ao iniciar, o Flyway cria as tabelas (scripts em `src/main/resources/db/migration`), cadastra os tipos de usuário iniciais (`restaurant_owner`, `customer`, `staff`, `premium_customer` e `admin`) e cria três usuários para acessar a API (ver abaixo).
+- Ao iniciar, o Flyway cria as tabelas (scripts em `src/main/resources/db/migration`), cadastra os tipos de usuário iniciais (`restaurant_owner`, `customer`, `staff`, `premium_customer` e `admin`) e cria três usuários para acessar a API (ver abaixo). A migration `V4` dá aos usuários de clientes e donos que já existiam o tipo do papel.
 
 ### 3. Acessar
 
@@ -109,7 +109,7 @@ A documentação interativa (Swagger, em português) fica em `/my-docs`, e o JSO
 | Recurso | Rotas |
 | --- | --- |
 | Tipos de usuário | `POST/GET /api/user-types`, `GET/PUT/DELETE /api/user-types/{id}` |
-| Usuários | `POST/GET /api/app-users`, `GET/DELETE /api/app-users/{id}`, `PATCH /api/app-users/{id}/password` |
+| Usuários | `GET /api/app-users`, `GET/DELETE /api/app-users/{id}`, `PATCH /api/app-users/{id}/password` |
 | Tipos de um usuário | `GET /api/app-users/{appUserId}/types`, `POST/DELETE /api/app-users/{appUserId}/types/{userTypeId}` |
 | Pessoas | `POST/GET /api/persons`, `GET/PUT/DELETE /api/persons/{id}` |
 | Clientes | `POST/GET /api/customers`, `GET/PUT/DELETE /api/customers/{id}` |
@@ -138,7 +138,14 @@ Exemplo de cadastro de restaurante:
 
 A autenticação é HTTP Basic, sem sessão: a cada requisição, o `AppUserDetailsService` busca o usuário pelo login (sem diferenciar maiúsculas de minúsculas), e a senha é conferida com o hash BCrypt gravado. Por isso, uma mudança nos tipos de um usuário já vale na requisição seguinte.
 
-Os **tipos de usuário** definem o que cada usuário pode fazer na API. Já **cliente** e **dono de restaurante** (`/api/customers` e `/api/restaurant-owners`) são papéis de negócio usados pelos casos de uso, por exemplo, para exigir que todo restaurante tenha um dono; sozinhos, eles não dão permissão nenhuma.
+Os **tipos de usuário** definem o que cada usuário pode fazer na API. Já **cliente** e **dono de restaurante** (`/api/customers` e `/api/restaurant-owners`) são papéis de negócio usados pelos casos de uso, por exemplo, para exigir que todo restaurante tenha um dono.
+
+Toda pessoa nasce com um usuário de acesso, e o usuário acompanha os papéis da pessoa:
+
+- `POST /api/persons` exige `login` e `password`, e cria o usuário sem tipos. O cadastro de cliente ou de dono também exige os dois quando a pessoa ainda não tem usuário (CPF novo); quando ela já tem, eles não podem ser enviados (409 `appUser.personAlreadyHasUser`). Não há outra forma de criar usuário.
+- Ao ganhar o papel, o usuário recebe o tipo dele: `customer` para cliente e `restaurant_owner` para dono. Ao perder o papel (`DELETE /api/customers/{id}` ou `/api/restaurant-owners/{id}`), perde o tipo.
+- Se o tipo do papel não estiver cadastrado, o cadastro é recusado com 409 `userType.defaultNotFound`, até que o tipo seja recriado com o mesmo código.
+- A pessoa, o papel e o usuário são gravados numa transação só: se algo falhar, nada fica gravado pela metade.
 
 Cada tipo associado ao usuário (`/api/app-users/{id}/types`) vira uma permissão. Um usuário pode ter vários tipos, e vale a soma das permissões deles:
 

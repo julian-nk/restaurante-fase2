@@ -6,9 +6,9 @@ import br.com.fiap.restaurante.core.exception.NotRestaurantOwnerException;
 import br.com.fiap.restaurante.core.exception.RestaurantNotFoundException;
 import br.com.fiap.restaurante.core.gateway.RestaurantGateway;
 
-final class RestaurantAccess {
+final class RestaurantAccessService {
 
-    private RestaurantAccess() {
+    private RestaurantAccessService() {
     }
 
     static void requireCanManage(Restaurant restaurant, RequesterDto requester) {

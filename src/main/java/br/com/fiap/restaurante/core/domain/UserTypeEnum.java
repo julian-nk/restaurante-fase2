@@ -1,4 +1,4 @@
-package br.com.fiap.restaurante.infra.security;
+package br.com.fiap.restaurante.core.domain;
 
 import lombok.Getter;
 

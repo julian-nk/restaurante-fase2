@@ -40,7 +40,7 @@ public class AppUser {
     public AppUser(Long id, Long personId, String login, String passwordHash, Set<Long> userTypeIds) {
         this.id = id;
         this.personId = DomainValidation.requirePositive(personId, "ID da pessoa");
-        this.login = validateLogin(login);
+        this.login = normalizeLogin(login);
         this.passwordHash = DomainValidation.requireText(passwordHash, PASSWORD_HASH_MAX_LENGTH, "senha");
         if (userTypeIds != null) {
             for (Long userTypeId : userTypeIds) {
@@ -49,7 +49,12 @@ public class AppUser {
         }
     }
 
-    private static String validateLogin(String login) {
+    /**
+     * Confere o login e o devolve como ele é gravado (sem espaços nas pontas e em minúsculas).
+     *
+     * @throws InvalidFieldException se o login for vazio ou estiver fora do formato
+     */
+    public static String normalizeLogin(String login) {
         String value = DomainValidation.requireText(login, LOGIN_MAX_LENGTH, "login").toLowerCase(Locale.ROOT);
         if (value.length() < LOGIN_MIN_LENGTH) {
             throw new InvalidFieldException("O campo login deve ter no mínimo " + LOGIN_MIN_LENGTH + " caracteres.");

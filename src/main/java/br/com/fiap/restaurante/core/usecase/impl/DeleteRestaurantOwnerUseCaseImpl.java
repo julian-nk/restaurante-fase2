@@ -1,5 +1,6 @@
 package br.com.fiap.restaurante.core.usecase.impl;
 
+import br.com.fiap.restaurante.core.domain.UserType;
 import br.com.fiap.restaurante.core.exception.RestaurantOwnerHasRestaurantsException;
 import br.com.fiap.restaurante.core.exception.RestaurantOwnerNotFoundException;
 import br.com.fiap.restaurante.core.gateway.RestaurantGateway;
@@ -10,13 +11,17 @@ public class DeleteRestaurantOwnerUseCaseImpl implements DeleteRestaurantOwnerUs
 
     private final RestaurantOwnerGateway restaurantOwnerGateway;
     private final RestaurantGateway restaurantGateway;
+    private final PersonAppUserService personAppUserService;
 
+    /** Remove o papel de dono, e o usuário da pessoa perde o tipo {@code restaurant_owner}. */
     public DeleteRestaurantOwnerUseCaseImpl(
             RestaurantOwnerGateway restaurantOwnerGateway,
-            RestaurantGateway restaurantGateway
+            RestaurantGateway restaurantGateway,
+            PersonAppUserService personAppUserService
     ) {
         this.restaurantOwnerGateway = restaurantOwnerGateway;
         this.restaurantGateway = restaurantGateway;
+        this.personAppUserService = personAppUserService;
     }
 
     @Override
@@ -28,5 +33,6 @@ public class DeleteRestaurantOwnerUseCaseImpl implements DeleteRestaurantOwnerUs
             throw new RestaurantOwnerHasRestaurantsException(id);
         }
         restaurantOwnerGateway.deleteById(id);
+        personAppUserService.removeUserType(id, UserType.RESTAURANT_OWNER_CODE);
     }
 }

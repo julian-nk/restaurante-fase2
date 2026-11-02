@@ -29,7 +29,7 @@ public class CreateMenuItemUseCaseImpl implements CreateMenuItemUseCase {
     public MenuItemOutputDto execute(CreateMenuItemInputDto input, RequesterDto requester) {
         MenuItem menuItem = menuItemFactory.create(input);
 
-        RestaurantAccess.findManageable(restaurantGateway, menuItem.getRestaurantId(), requester);
+        RestaurantAccessService.findManageable(restaurantGateway, menuItem.getRestaurantId(), requester);
 
         return MenuItemOutputDto.from(menuItemGateway.save(menuItem));
     }

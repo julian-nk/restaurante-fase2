@@ -1,5 +1,6 @@
 package br.com.fiap.restaurante.infra.security;
 
+import br.com.fiap.restaurante.core.domain.UserTypeEnum;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.server.PathContainer;
 import org.springframework.web.util.pattern.PathPattern;

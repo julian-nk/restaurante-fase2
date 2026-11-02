@@ -6,10 +6,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface UserTypeRepository extends JpaRepository<UserTypeEntity, Long> {
 
     boolean existsByCode(String code);
+
+    Optional<UserTypeEntity> findByCode(String code);
 
     @Query("""
             select ut

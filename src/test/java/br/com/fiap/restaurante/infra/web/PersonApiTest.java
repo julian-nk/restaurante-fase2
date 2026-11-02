@@ -5,6 +5,7 @@ import br.com.fiap.restaurante.core.domain.StatesEnum;
 import br.com.fiap.restaurante.core.dto.AddressInputDto;
 import br.com.fiap.restaurante.core.dto.AddressOutputDto;
 import br.com.fiap.restaurante.core.dto.CreatePersonInputDto;
+import br.com.fiap.restaurante.core.dto.LoginInputDto;
 import br.com.fiap.restaurante.core.dto.PersonOutputDto;
 import br.com.fiap.restaurante.core.dto.UpdatePersonInputDto;
 import br.com.fiap.restaurante.core.exception.CpfAlreadyRegisteredException;
@@ -31,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PersonApiTest {
 
     private static final PersonOutputDto ANA = new PersonOutputDto(1L, "Ana", "ana@email.com", "39053344705", null);
+    private static final LoginInputDto LOGIN = new LoginInputDto("ana", "senha1234");
 
     @Autowired
     private MockMvc mockMvc;
@@ -40,13 +42,14 @@ class PersonApiTest {
 
     @Test
     void shouldCreatePerson() throws Exception {
-        when(personController.create(new CreatePersonInputDto("Ana", "ana@email.com", "390.533.447-05", null)))
+        when(personController.create(new CreatePersonInputDto("Ana", "ana@email.com", "390.533.447-05", null), LOGIN))
                 .thenReturn(ANA);
 
         mockMvc.perform(post("/api/persons")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name": "Ana", "email": "ana@email.com", "cpf": "390.533.447-05"}
+                                {"name": "Ana", "email": "ana@email.com", "cpf": "390.533.447-05",
+                                 "login": "ana", "password": "senha1234"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
@@ -58,7 +61,7 @@ class PersonApiTest {
         var address = new AddressInputDto("Av. Paulista", "1000", null, "Bela Vista", "São Paulo", StatesEnum.SP, "01310-100");
         var output = new PersonOutputDto(1L, "Ana", "ana@email.com", "39053344705",
                 new AddressOutputDto(5L, "Av. Paulista", "1000", null, "Bela Vista", "São Paulo", "SP", "01310100"));
-        when(personController.create(new CreatePersonInputDto("Ana", "ana@email.com", "39053344705", address)))
+        when(personController.create(new CreatePersonInputDto("Ana", "ana@email.com", "39053344705", address), LOGIN))
                 .thenReturn(output);
 
         mockMvc.perform(post("/api/persons")
@@ -66,7 +69,8 @@ class PersonApiTest {
                         .content("""
                                 {"name": "Ana", "email": "ana@email.com", "cpf": "39053344705",
                                  "address": {"street": "Av. Paulista", "number": "1000", "neighborhood": "Bela Vista",
-                                             "city": "São Paulo", "state": "sp", "zipCode": "01310-100"}}
+                                             "city": "São Paulo", "state": "sp", "zipCode": "01310-100"},
+                                 "login": "ana", "password": "senha1234"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.address.id").value(5));
@@ -86,13 +90,27 @@ class PersonApiTest {
     }
 
     @Test
-    void shouldReturnConflictWhenCpfAlreadyExists() throws Exception {
-        when(personController.create(any())).thenThrow(new CpfAlreadyRegisteredException("39053344705"));
-
+    void shouldRequireLoginAndPassword() throws Exception {
         mockMvc.perform(post("/api/persons")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name": "Ana", "email": "ana@email.com", "cpf": "39053344705"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("login")));
+
+        verifyNoInteractions(personController);
+    }
+
+    @Test
+    void shouldReturnConflictWhenCpfAlreadyExists() throws Exception {
+        when(personController.create(any(), any())).thenThrow(new CpfAlreadyRegisteredException("39053344705"));
+
+        mockMvc.perform(post("/api/persons")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Ana", "email": "ana@email.com", "cpf": "39053344705",
+                                 "login": "ana", "password": "senha1234"}
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("person.cpfAlreadyRegistered"));

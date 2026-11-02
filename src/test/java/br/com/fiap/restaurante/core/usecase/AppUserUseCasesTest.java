@@ -4,18 +4,13 @@ import br.com.fiap.restaurante.core.domain.AppUser;
 import br.com.fiap.restaurante.core.factory.impl.AppUserFactoryImpl;
 import br.com.fiap.restaurante.core.dto.AppUserOutputDto;
 import br.com.fiap.restaurante.core.dto.ChangePasswordInputDto;
-import br.com.fiap.restaurante.core.dto.CreateAppUserInputDto;
 import br.com.fiap.restaurante.core.dto.RequesterDto;
 import br.com.fiap.restaurante.core.exception.AppUserNotFoundException;
 import br.com.fiap.restaurante.core.exception.InvalidFieldException;
 import br.com.fiap.restaurante.core.exception.InvalidPasswordException;
-import br.com.fiap.restaurante.core.exception.LoginAlreadyInUseException;
 import br.com.fiap.restaurante.core.exception.PasswordChangeNotAllowedException;
-import br.com.fiap.restaurante.core.exception.PersonAlreadyHasUserException;
-import br.com.fiap.restaurante.core.exception.PersonNotFoundException;
 import br.com.fiap.restaurante.core.gateway.AppUserGateway;
 import br.com.fiap.restaurante.core.gateway.PasswordEncoderGateway;
-import br.com.fiap.restaurante.core.gateway.PersonGateway;
 import br.com.fiap.restaurante.core.usecase.impl.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -34,13 +29,11 @@ class AppUserUseCasesTest {
 
     private final AppUserFactoryImpl factory = new AppUserFactoryImpl();
     private AppUserGateway gateway;
-    private PersonGateway personGateway;
     private PasswordEncoderGateway passwordEncoder;
 
     @BeforeEach
     void setUp() {
         gateway = mock(AppUserGateway.class);
-        personGateway = mock(PersonGateway.class);
         passwordEncoder = mock(PasswordEncoderGateway.class);
         when(passwordEncoder.encode(any())).thenAnswer(invocation -> "hash:" + invocation.getArgument(0));
         when(gateway.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -48,60 +41,6 @@ class AppUserUseCasesTest {
 
     private AppUser maria() {
         return factory.restore(1L, 10L, "maria", "hash:senhaAtual1", Set.of(2L));
-    }
-
-    @Nested
-    class Create {
-
-        private CreateAppUserUseCase useCase;
-
-        @BeforeEach
-        void setUp() {
-            useCase = new CreateAppUserUseCaseImpl(gateway, personGateway, passwordEncoder, factory);
-            when(personGateway.existsById(10L)).thenReturn(true);
-        }
-
-        @Test
-        void shouldCreateUserStoringOnlyThePasswordHash() {
-            AppUserOutputDto output = useCase.execute(new CreateAppUserInputDto(10L, "Maria", "senhaForte1"));
-
-            assertEquals(new AppUserOutputDto(null, 10L, "maria"), output);
-            ArgumentCaptor<AppUser> captor = ArgumentCaptor.forClass(AppUser.class);
-            verify(gateway).save(captor.capture());
-            assertEquals("hash:senhaForte1", captor.getValue().getPasswordHash());
-        }
-
-        @Test
-        void shouldRejectWeakPasswordBeforeHashing() {
-            assertThrows(InvalidFieldException.class,
-                    () -> useCase.execute(new CreateAppUserInputDto(10L, "maria", "123")));
-            verify(passwordEncoder, never()).encode(any());
-        }
-
-        @Test
-        void shouldRejectUnknownPerson() {
-            when(personGateway.existsById(10L)).thenReturn(false);
-
-            assertThrows(PersonNotFoundException.class,
-                    () -> useCase.execute(new CreateAppUserInputDto(10L, "maria", "senhaForte1")));
-        }
-
-        @Test
-        void shouldRejectSecondUserForSamePerson() {
-            when(gateway.existsByPersonId(10L)).thenReturn(true);
-
-            assertThrows(PersonAlreadyHasUserException.class,
-                    () -> useCase.execute(new CreateAppUserInputDto(10L, "maria", "senhaForte1")));
-        }
-
-        @Test
-        void shouldRejectLoginInUse() {
-            when(gateway.existsByLogin("maria")).thenReturn(true);
-
-            assertThrows(LoginAlreadyInUseException.class,
-                    () -> useCase.execute(new CreateAppUserInputDto(10L, "maria", "senhaForte1")));
-            verify(gateway, never()).save(any());
-        }
     }
 
     @Nested

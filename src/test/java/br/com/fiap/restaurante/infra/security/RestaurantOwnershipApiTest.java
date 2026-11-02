@@ -4,10 +4,13 @@ import br.com.fiap.restaurante.core.controller.MenuItemController;
 import br.com.fiap.restaurante.core.controller.RestaurantController;
 import br.com.fiap.restaurante.core.controller.RestaurantOwnerController;
 import br.com.fiap.restaurante.core.domain.StatesEnum;
+import br.com.fiap.restaurante.core.domain.UserType;
+import br.com.fiap.restaurante.core.domain.UserTypeEnum;
 import br.com.fiap.restaurante.core.dto.AddressInputDto;
 import br.com.fiap.restaurante.core.dto.CreateMenuItemInputDto;
 import br.com.fiap.restaurante.core.dto.CreateRestaurantInputDto;
 import br.com.fiap.restaurante.core.dto.CreateRestaurantOwnerInputDto;
+import br.com.fiap.restaurante.core.dto.LoginInputDto;
 import br.com.fiap.restaurante.core.dto.OpeningHoursInputDto;
 import br.com.fiap.restaurante.core.dto.RequesterDto;
 import br.com.fiap.restaurante.infra.database.jpa.entity.AppUserEntity;
@@ -124,12 +127,15 @@ class RestaurantOwnershipApiTest {
 
     @BeforeEach
     void createOwnersAndRestaurant() {
-        ownerId = registerOwner("71428793860");
-        otherOwnerId = registerOwner("87748248800");
+        // nos testes o Flyway não roda, então o tipo que a migration V2 cadastra é criado aqui
+        if (!userTypeRepository.existsByCode(UserType.RESTAURANT_OWNER_CODE)) {
+            userTypeRepository.save(new UserTypeEntity(null, "Dono de Restaurante", UserType.RESTAURANT_OWNER_CODE));
+        }
+        // o cadastro do dono já cria o usuário dele, com o tipo restaurant_owner
+        ownerId = registerOwner("71428793860", OWNER);
+        otherOwnerId = registerOwner("87748248800", OTHER_OWNER);
 
         createUser(5001L, ADMIN, UserTypeEnum.ADMIN.getCode());
-        createUser(ownerId, OWNER, UserTypeEnum.RESTAURANT_OWNER.getCode());
-        createUser(otherOwnerId, OTHER_OWNER, UserTypeEnum.RESTAURANT_OWNER.getCode());
 
         RequesterDto owner = new RequesterDto(ownerId, false);
         restaurantId = restaurantController.create(new CreateRestaurantInputDto(
@@ -140,9 +146,10 @@ class RestaurantOwnershipApiTest {
                 restaurantId, "Pizza", "Pizza de queijo", new BigDecimal("39.90"), false, null), owner).id();
     }
 
-    private Long registerOwner(String cpf) {
+    private Long registerOwner(String cpf, String login) {
         return restaurantOwnerController.register(new CreateRestaurantOwnerInputDto(
-                "Dono " + cpf, cpf + "@email.com", cpf, null, "contato" + cpf + "@cantina.com")).id();
+                "Dono " + cpf, cpf + "@email.com", cpf, null, "contato" + cpf + "@cantina.com"),
+                new LoginInputDto(login, PASSWORD)).id();
     }
 
     private void createUser(Long personId, String login, String userTypeCode) {
