@@ -1,9 +1,13 @@
 package br.com.fiap.restaurante.infra.config;
 
+import br.com.fiap.restaurante.infra.security.ApiAccessRules;
+import br.com.fiap.restaurante.infra.security.JsonSecurityErrorHandler;
+import br.com.fiap.restaurante.infra.security.Rule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -22,36 +26,32 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) {
-        return deactivateAuthentication(http);
-    }
+        JsonSecurityErrorHandler errorHandler = new JsonSecurityErrorHandler();
 
-    private SecurityFilterChain deactivateAuthentication(HttpSecurity http) {
         http
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(ApiAccessRules.PUBLIC_PATHS.toArray(String[]::new)).permitAll();
 
-        return http.build();
-    }
+                    for (Rule rule : ApiAccessRules.RULES) {
+                        var route = rule.method() == null
+                                    ? auth.requestMatchers(rule.pattern())
+                                    : auth.requestMatchers(rule.method(), rule.pattern());
+                        if (rule.allowsAnyAuthenticatedUser()) {
+                            route.authenticated();
+                        } else {
+                            route.hasAnyRole(rule.roles());
+                        }
+                    }
 
-    /**
-     * Todas as rotas da API exigem HTTP Basic com o login e a senha de um usuário cadastrado (ver
-     * {@link br.com.fiap.restaurante.infra.security.AppUserDetailsService}); só a documentação fica aberta.
-     */
-    private SecurityFilterChain activateAuthentication(HttpSecurity http) {
-        http
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/my-docs",
-                                "/my-docs/**",
-                                "/api-docs",
-                                "/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html"
-                        ).permitAll()
-                        .anyRequest().authenticated()
-                )
-                .httpBasic(Customizer.withDefaults());
+                    auth.anyRequest().authenticated();
+                })
+                .httpBasic(basic -> basic.authenticationEntryPoint(errorHandler))
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(errorHandler)
+                        .accessDeniedHandler(errorHandler));
+
         return http.build();
     }
 }

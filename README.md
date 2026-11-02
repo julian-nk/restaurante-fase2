@@ -51,6 +51,16 @@ docker compose up -d --build
 - OpenAPI em JSON: <http://localhost:8080/api-docs>
 - Endpoints: `http://localhost:8080/api/...` (ver [Endpoints](#endpoints))
 
+Usuários criados pela migration `V3__create_initial_users.sql` para facilitar os testes e acessar a API (HTTP Basic):
+
+| Login | Senha | Tipo de usuário | O que pode fazer |
+| --- | --- | --- | --- |
+| `admin` | `admin12345` | `admin` | Tudo |
+| `dono` | `dono12345` | `restaurant_owner` | Consultar, cadastrar, alterar e excluir restaurantes e pratos; trocar a senha |
+| `cliente` | `cliente123` | `customer` | Consultar restaurantes e pratos; trocar a senha |
+
+O que cada tipo de usuário pode fazer está em [Autenticação e permissões](#autenticação-e-permissões).
+
 ### Banco de dados
 
 O PostgreSQL também fica acessível pela sua máquina em `localhost:5432` (banco `restaurante`, com o usuário e a senha do `.env`), para consultar os dados com DBeaver, pgAdmin ou `psql`. Os dados ficam no volume `postgres_data` e são mantidos entre reinícios.
@@ -85,28 +95,16 @@ br.com.fiap.restaurante
     │   │   ├── entity           # Entidades @Entity (modelo de persistência)
     │   │   └── repository       # Spring Data
     │   └── mapper               # Conversão entidade JPA <-> domínio
-    ├── security                 # Autenticação pelos usuários da aplicação e hash de senha (BCrypt)
+    ├── security                 # Autenticação (HTTP Basic), permissões por tipo de usuário e hash de senha (BCrypt)
     └── web                      # @RestController (APIs), tratamento de erros HTTP
         └── json                 # Corpo das requisições com Bean Validation
 ```
 
-### Fluxo de uma requisição
-
-`UserTypeApi` (infra/web) valida o JSON → `UserTypeController` (core) → `CreateUserTypeUseCase` (core) → `UserTypeFactory` cria a entidade de domínio, que valida suas regras → `UserTypeGateway` (interface do core) → `UserTypeJpaGateway` (infra) usa o `UserTypeMapper` e o `UserTypeRepository` para persistir.
-
-### Regras que mantêm a arquitetura
-
-- **A dependência aponta para dentro:** `infra` conhece `core`; `core` não conhece `infra`.
-- **O domínio não é a entidade JPA.** `core.domain.UserType` e `infra.database.jpa.entity.UserTypeEntity` são classes diferentes; o mapper faz a conversão.
-- **Os use cases e controllers do core não têm anotações do Spring.** Eles viram beans apenas em `infra/config/DependencyInjectionConfiguration`.
-- **Erros de negócio** são exceções do core (`SystemBaseException`) com código e status; o `GlobalExceptionHandler` da infra só as traduz para HTTP.
-- O `ArchitectureTest` (ArchUnit) falha o build se alguma classe do `core` passar a depender da `infra` ou de qualquer biblioteca fora do JDK.
-
 ## Endpoints
 
-Todas as rotas exigem autenticação HTTP Basic com o login e a senha de um usuário cadastrado (ver `SecurityConfig` e `AppUserDetailsService`; usuários iniciais em [Executando com Docker](#3-acessar)). Erros de negócio retornam `{"error", "code", "message"}` com o status indicado pela exceção do core.
+Todas as rotas em `/api` exigem autenticação HTTP Basic com o login e a senha de um usuário cadastrado (usuários iniciais em [Executando com Docker](#3-acessar)), e cada uma aceita só alguns tipos de usuário (ver [Autenticação e permissões](#autenticação-e-permissões)). Erros de negócio retornam `{"error", "code", "message"}` com o status indicado pela exceção do core.
 
-A documentação interativa (Swagger, em português) fica em `/my-docs`, e o JSON do OpenAPI em `/api-docs`. Essas duas rotas não exigem autenticação; para testar os endpoints pelo Swagger, informe usuário e senha no botão *Authorize*.
+A documentação interativa (Swagger, em português) fica em `/my-docs`, e o JSON do OpenAPI em `/api-docs`. Essas duas rotas não exigem autenticação; para testar os endpoints pelo Swagger, informe usuário e senha no botão *Authorize*. A descrição de cada operação diz quais tipos de usuário podem chamá-la, e as operações restritas documentam também a resposta 403.
 
 | Recurso | Rotas |
 | --- | --- |
@@ -136,13 +134,29 @@ Exemplo de cadastro de restaurante:
 }
 ```
 
-### Principais regras de negócio
+### Autenticação e permissões
 
-- **Pessoa:** pode ser cadastrada sem papel (um administrador, por exemplo) e, depois, passar a ser cliente e/ou dona de restaurante. CPF (11 dígitos) e e-mail são únicos; CPF, CNPJ e CEP aceitam pontuação e são gravados só com dígitos. O endereço é opcional e, se omitido na atualização, é removido.
-- **Usuário:** uma pessoa tem no máximo um usuário; o login é único (minúsculo, letras/números/`._-`). A senha precisa de 8 a 72 caracteres, com letras e números, e só o hash BCrypt é gravado.
-- **Cliente e dono de restaurante** são cadastrados com os dados da pessoa, e o ID de cada um é o da pessoa. Se o CPF já existir (pessoa sem papel ou com o outro papel), ela é reaproveitada e os dados enviados substituem os gravados. Remover um papel não exclui a pessoa, mesmo que seja o último; para isso, use `DELETE /api/persons/{id}`, que exclui junto o endereço, os papéis e o usuário de acesso.
-- **Restaurante:** o dono precisa estar cadastrado como dono de restaurante, o CNPJ é único e é obrigatório ao menos um horário. Os turnos não podem se sobrepor, e um fechamento menor que a abertura indica que o turno termina no dia seguinte.
-- Não é possível remover o papel de dono, nem excluir a pessoa, enquanto ela tiver restaurantes; só é possível cadastrar item de cardápio em restaurante existente.
+A autenticação é HTTP Basic, sem sessão: a cada requisição, o `AppUserDetailsService` busca o usuário pelo login (sem diferenciar maiúsculas de minúsculas), e a senha é conferida com o hash BCrypt gravado. Por isso, uma mudança nos tipos de um usuário já vale na requisição seguinte.
+
+Os **tipos de usuário** definem o que cada usuário pode fazer na API. Já **cliente** e **dono de restaurante** (`/api/customers` e `/api/restaurant-owners`) são papéis de negócio usados pelos casos de uso, por exemplo, para exigir que todo restaurante tenha um dono; sozinhos, eles não dão permissão nenhuma.
+
+Cada tipo associado ao usuário (`/api/app-users/{id}/types`) vira uma permissão. Um usuário pode ter vários tipos, e vale a soma das permissões deles:
+
+| Rotas | Quem pode |
+| --- | --- |
+| `GET /api/restaurants/**` e `GET /api/menu-items/**` | Qualquer usuário autenticado |
+| `POST`, `PUT` e `DELETE` em `/api/restaurants/**` e `/api/menu-items/**` | `restaurant_owner` ou `admin` |
+| `PATCH /api/app-users/{id}/password` | Qualquer usuário autenticado (o caso de uso confere a senha atual) |
+| Todas as demais (tipos de usuário e associações, usuários, pessoas, clientes e donos) | `admin` |
+
+As regras ficam em um único lugar, `infra/security/ApiAccessRules`: a lista `RULES`, em que vale a primeira regra que casar com a requisição (por isso as mais específicas vêm antes), e a lista `PUBLIC_PATHS`, com as rotas que não exigem login (a documentação e a página de erro). O `SecurityConfig` aplica as regras, e o Swagger as documenta a partir dessa classe.
+
+As recusas da segurança são respondidas pelo `JsonSecurityErrorHandler`, no mesmo formato dos outros erros:
+
+| Status | `code` | Quando |
+| --- | --- | --- |
+| 401 | `auth.unauthenticated` | Sem credenciais, ou login e senha que não conferem. A resposta traz o cabeçalho `WWW-Authenticate: Basic realm="restaurante"` |
+| 403 | `auth.forbidden` | Credenciais válidas, mas nenhum tipo do usuário tem permissão para a rota |
 
 ## Collection do Postman
 
@@ -170,7 +184,9 @@ Antes de cada requisição, um script da collection gera CPF, CNPJ, e-mail, logi
 | --- | --- | --- |
 | `host` | `localhost` | Host da API |
 | `port` | `8080` | Porta da API |
-| `authLogin` / `authPassword` | `admin` / `admin12345` | Usuário HTTP Basic enviado em todas as requisições (criado pela migration `V3__create_initial_users.sql`) |
+| `authLogin` / `authPassword` | `admin` / `admin12345` | Usuário HTTP Basic padrão da collection, enviado nas requisições que não definem outro (criado pela migration `V3__create_initial_users.sql`) |
+| `ownerLogin` / `ownerPassword` | `dono` / `dono12345` | Usuário do tipo `restaurant_owner`, usado na pasta **10 - Permissões** |
+| `customerLogin` / `customerPassword` | `cliente` / `cliente123` | Usuário do tipo `customer`, usado na pasta **10 - Permissões** |
 
 As demais variáveis são preenchidas pelos próprios testes durante a execução.
 

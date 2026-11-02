@@ -1,24 +1,35 @@
 package br.com.fiap.restaurante.infra.config;
 
+import br.com.fiap.restaurante.infra.security.ApiAccessRules;
+import br.com.fiap.restaurante.infra.security.Rule;
+import br.com.fiap.restaurante.infra.security.UserTypeEnum;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.media.*;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
- * Configuração da documentação da API (springdoc/Swagger), que fica disponível em {@code /my-docs}.
+ * Configuração da documentação da API (springdoc/Swagger).
  */
 @Configuration
 public class OpenApiConfiguration {
 
+    private static final String BASIC_AUTH = "basicAuth";
     private static final String ERROR_SCHEMA = "Erro";
+    private static final String ACCESS_LABEL = "Acesso: ";
 
     private static final String DESCRIPTION = """
             API do Tech Challenge (fase 2) para gestão de restaurantes.
@@ -94,7 +105,36 @@ public class OpenApiConfiguration {
     }
 
     private static boolean isErrorWithBody(String status) {
-        return (status.startsWith("4") && !status.equals("401")) || status.startsWith("5");
+        return status.startsWith("4") || status.startsWith("5");
+    }
+
+    private static void describeAccess(String path, String method, Operation operation) {
+        Optional<Rule> rule = ApiAccessRules.ruleFor(HttpMethod.valueOf(method), path);
+        if (rule.isEmpty()) {
+            return;
+        }
+        ApiResponses responses = operation.getResponses();
+        responses.putIfAbsent("401", new ApiResponse()
+                .description("Não autenticado: informe o login e a senha de um usuário (HTTP Basic)."));
+
+        String access;
+        if (rule.get().allowsAnyAuthenticatedUser()) {
+            access = "qualquer usuário autenticado.";
+        } else {
+            String tipos = rule.get().userTypeCodes().stream()
+                               .map(UserTypeEnum::getCode)
+                               .collect(Collectors.joining(" ou "));
+            access = "usuários do tipo " + tipos + ".";
+            responses.putIfAbsent("403", new ApiResponse()
+                    .description("Sem permissão: o tipo do usuário não pode chamar esta operação."));
+        }
+
+        String description = operation.getDescription();
+        if (description == null || description.isBlank()) {
+            operation.setDescription(ACCESS_LABEL + access);
+        } else if (!description.contains(ACCESS_LABEL)) {
+            operation.setDescription(description + "\n\n" + ACCESS_LABEL + access);
+        }
     }
 
     private static Content errorContent() {
@@ -128,7 +168,13 @@ public class OpenApiConfiguration {
                 .info(new Info()
                               .title("API de Gestão de Restaurantes")
                               .version("v1")
-                              .description(DESCRIPTION));
+                              .description(DESCRIPTION))
+                .components(new Components()
+                                    .addSecuritySchemes(BASIC_AUTH, new SecurityScheme()
+                                            .type(SecurityScheme.Type.HTTP)
+                                            .scheme("basic")
+                                            .description("Login e senha de um usuário cadastrado na aplicação.")))
+                .addSecurityItem(new SecurityRequirement().addList(BASIC_AUTH));
     }
 
     /**
@@ -136,9 +182,10 @@ public class OpenApiConfiguration {
      * declarar os casos específicos de cada operação.
      *
      * <ul>
-     *     <li>Toda operação ganha as respostas 401 (sem autenticação) e 500 (erro inesperado).</li>
-     *     <li>Toda resposta de erro, exceto a 401, passa a mostrar o corpo no formato do schema {@code Erro}.
-     *     Assim, nas APIs basta escrever o código e a descrição do erro.</li>
+     *     <li>Toda operação ganha as respostas 401 (sem autenticação) e 500 (erro inesperado), e a 403 quando só
+     *     alguns tipos de usuário podem chamá-la. A descrição da operação diz quem tem acesso.</li>
+     *     <li>Toda resposta de erro passa a mostrar o corpo no formato do schema {@code Erro}. Assim, nas APIs
+     *     basta escrever o código e a descrição do erro.</li>
      *     <li>Se a operação declara 201 ou 204, a resposta 200 sai. O springdoc não enxerga o status definido
      *     dentro de {@code ResponseEntity.status(...)} e acrescentaria um 200 que a API nunca devolve.</li>
      * </ul>
@@ -154,7 +201,7 @@ public class OpenApiConfiguration {
             if (openApi.getPaths() == null) {
                 return;
             }
-            openApi.getPaths().values().forEach(path -> path.readOperations().forEach(operation -> {
+            openApi.getPaths().forEach((pathName, path) -> path.readOperationsMap().forEach((method, operation) -> {
                 ApiResponses responses = operation.getResponses();
                 if (responses == null) {
                     return;
@@ -162,6 +209,7 @@ public class OpenApiConfiguration {
                 if (responses.containsKey("201") || responses.containsKey("204")) {
                     responses.remove("200");
                 }
+                describeAccess(pathName, method.name(), operation);
                 responses.putIfAbsent("500", new ApiResponse()
                         .description("Erro inesperado, como uma falha de acesso ao banco de dados."));
                 responses.forEach((status, response) -> {

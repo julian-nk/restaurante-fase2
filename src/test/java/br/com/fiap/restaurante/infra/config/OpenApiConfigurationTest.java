@@ -18,7 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class OpenApiConfigurationTest {
+public class OpenApiConfigurationTest {
 
     private static final String CREATE_USER_TYPE = "$.paths['/api/user-types'].post";
 
@@ -41,6 +41,20 @@ class OpenApiConfigurationTest {
                 .andExpect(jsonPath(CREATE_USER_TYPE + ".responses['200']").doesNotExist())
                 .andExpect(jsonPath(CREATE_USER_TYPE + ".responses['401']").exists())
                 .andExpect(jsonPath(CREATE_USER_TYPE + ".responses['500']").exists());
+    }
+
+    @Test
+    void shouldDocumentWhoCanCallEachOperation() throws Exception {
+        mockMvc.perform(get("/api-docs"))
+                .andExpect(jsonPath("$.paths['/api/menu-items'].post.responses['403']").exists())
+                .andExpect(jsonPath("$.paths['/api/menu-items'].post.description")
+                        .value("Acesso: usuários do tipo admin ou restaurant_owner."))
+                .andExpect(jsonPath("$.paths['/api/menu-items'].get.responses['403']").doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/menu-items'].get.description")
+                        .value("Acesso: qualquer usuário autenticado."))
+                .andExpect(jsonPath(CREATE_USER_TYPE + ".responses['403']").exists())
+                .andExpect(jsonPath(CREATE_USER_TYPE + ".responses['401'].content['application/json'].schema['$ref']")
+                        .value("#/components/schemas/Erro"));
     }
 
     @Test

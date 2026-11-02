@@ -17,6 +17,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -30,6 +32,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ApiAuthenticationTest {
 
     private static final String PASSWORD = "senhaForte1";
+
+    /** Rota liberada para qualquer usuário autenticado, mesmo sem tipo (ver {@link ApiAccessRules}). */
+    private static final String CATALOG = "/api/menu-items";
 
     @Autowired
     private MockMvc mockMvc;
@@ -52,31 +57,34 @@ class ApiAuthenticationTest {
 
     @Test
     void shouldAcceptRegisteredUser() throws Exception {
-        mockMvc.perform(get("/api/user-types").header(HttpHeaders.AUTHORIZATION, basic("maria", PASSWORD)))
+        mockMvc.perform(get(CATALOG).header(HttpHeaders.AUTHORIZATION, basic("maria", PASSWORD)))
                 .andExpect(status().isOk());
     }
 
     @Test
     void shouldAcceptLoginWrittenInAnotherCase() throws Exception {
-        mockMvc.perform(get("/api/user-types").header(HttpHeaders.AUTHORIZATION, basic("Maria", PASSWORD)))
+        mockMvc.perform(get(CATALOG).header(HttpHeaders.AUTHORIZATION, basic("Maria", PASSWORD)))
                 .andExpect(status().isOk());
     }
 
     @Test
     void shouldRejectWrongPassword() throws Exception {
-        mockMvc.perform(get("/api/user-types").header(HttpHeaders.AUTHORIZATION, basic("maria", "outraSenha1")))
+        mockMvc.perform(get(CATALOG).header(HttpHeaders.AUTHORIZATION, basic("maria", "outraSenha1")))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void shouldRejectUnknownUser() throws Exception {
-        mockMvc.perform(get("/api/user-types").header(HttpHeaders.AUTHORIZATION, basic("joao", PASSWORD)))
+        mockMvc.perform(get(CATALOG).header(HttpHeaders.AUTHORIZATION, basic("joao", PASSWORD)))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void shouldRejectRequestWithoutCredentials() throws Exception {
-        mockMvc.perform(get("/api/user-types"))
-                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get(CATALOG))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"restaurante\""))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.code").value("auth.unauthenticated"));
     }
 }
