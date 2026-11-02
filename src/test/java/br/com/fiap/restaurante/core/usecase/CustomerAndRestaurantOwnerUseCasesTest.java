@@ -1,13 +1,17 @@
 package br.com.fiap.restaurante.core.usecase;
 
 import br.com.fiap.restaurante.core.domain.Customer;
+import br.com.fiap.restaurante.core.domain.Restaurant;
 import br.com.fiap.restaurante.core.domain.RestaurantOwner;
 import br.com.fiap.restaurante.core.domain.StatesEnum;
 import br.com.fiap.restaurante.core.dto.AddressInputDto;
 import br.com.fiap.restaurante.core.dto.CreateCustomerInputDto;
+import br.com.fiap.restaurante.core.dto.CreateRestaurantInputDto;
 import br.com.fiap.restaurante.core.dto.CreateRestaurantOwnerInputDto;
 import br.com.fiap.restaurante.core.dto.CustomerOutputDto;
+import br.com.fiap.restaurante.core.dto.OpeningHoursInputDto;
 import br.com.fiap.restaurante.core.dto.RestaurantOwnerOutputDto;
+import br.com.fiap.restaurante.core.dto.RestaurantSummaryOutputDto;
 import br.com.fiap.restaurante.core.dto.UpdateCustomerInputDto;
 import br.com.fiap.restaurante.core.dto.UpdateRestaurantOwnerInputDto;
 import br.com.fiap.restaurante.core.exception.CustomerAlreadyRegisteredException;
@@ -19,6 +23,8 @@ import br.com.fiap.restaurante.core.exception.RestaurantOwnerHasRestaurantsExcep
 import br.com.fiap.restaurante.core.exception.RestaurantOwnerNotFoundException;
 import br.com.fiap.restaurante.core.factory.impl.AddressFactoryImpl;
 import br.com.fiap.restaurante.core.factory.impl.CustomerFactoryImpl;
+import br.com.fiap.restaurante.core.factory.impl.OpeningHoursFactoryImpl;
+import br.com.fiap.restaurante.core.factory.impl.RestaurantFactoryImpl;
 import br.com.fiap.restaurante.core.factory.impl.RestaurantOwnerFactoryImpl;
 import br.com.fiap.restaurante.core.gateway.CustomerGateway;
 import br.com.fiap.restaurante.core.gateway.PersonGateway;
@@ -30,6 +36,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.time.DayOfWeek;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -68,7 +76,18 @@ class CustomerAndRestaurantOwnerUseCasesTest {
     }
 
     private RestaurantOwner storedOwner() {
-        return ownerFactory.restore(1L, "Maria", "maria@email.com", CPF, null, CREATED_ON, "contato@cantina.com");
+        return ownerFactory.restore(1L, "Maria", "maria@email.com", CPF, null, CREATED_ON, "contato@cantina.com",
+                                    List.of());
+    }
+
+    /** Restaurante 10, da Maria (pessoa 1). */
+    private Restaurant restaurantOfMaria() {
+        RestaurantFactoryImpl restaurantFactory = new RestaurantFactoryImpl(addressFactory, new OpeningHoursFactoryImpl());
+        Restaurant created = restaurantFactory.create(new CreateRestaurantInputDto(
+                "Cantina", "12345678000199", "Italiana", 1L, ADDRESS,
+                List.of(new OpeningHoursInputDto(DayOfWeek.MONDAY, LocalTime.of(11, 0), LocalTime.of(15, 0)))));
+        return restaurantFactory.restore(10L, created.getName(), created.getCnpj(), created.getCuisineType(),
+                                         created.getOwnerId(), created.getAddress(), created.getOpeningHours());
     }
 
     @Nested
@@ -318,6 +337,20 @@ class CustomerAndRestaurantOwnerUseCasesTest {
             assertEquals(CREATED_ON, new GetRestaurantOwnerByIdUseCaseImpl(ownerGateway).execute(1L).createdOn());
             assertThrows(RestaurantOwnerNotFoundException.class,
                     () -> new GetRestaurantOwnerByIdUseCaseImpl(ownerGateway).execute(2L));
+        }
+
+        @Test
+        void shouldReturnTheRestaurantsOfTheOwner() {
+            RestaurantOwner owner = ownerFactory.restore(1L, "Maria", "maria@email.com", CPF, null, CREATED_ON,
+                                                         "contato@cantina.com", List.of(restaurantOfMaria()));
+            when(ownerGateway.findById(1L)).thenReturn(Optional.of(owner));
+            var expected = List.of(new RestaurantSummaryOutputDto(10L, "Cantina", "12345678000199", "Italiana"));
+
+            assertEquals(expected, new GetRestaurantOwnerByIdUseCaseImpl(ownerGateway).execute(1L).restaurants());
+            assertEquals(expected, new UpdateRestaurantOwnerUseCaseImpl(ownerGateway, personGateway, addressFactory)
+                    .execute(new UpdateRestaurantOwnerInputDto(1L, "Maria Souza", "maria@email.com", null,
+                                                               "contato@cantina.com"))
+                    .restaurants());
         }
     }
 }

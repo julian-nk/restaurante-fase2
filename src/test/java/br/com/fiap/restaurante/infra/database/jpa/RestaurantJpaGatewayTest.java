@@ -117,6 +117,21 @@ class RestaurantJpaGatewayTest {
     }
 
     @Test
+    void shouldFindTheRestaurantsOfTheOwners() {
+        when(restaurantRepository.findByOwnerIdInOrderByIdAsc(List.of(7L))).thenReturn(List.of(RESTAURANT));
+        when(addressRepository.findAllById(List.of(5L))).thenReturn(List.of(ADDRESS));
+        when(openingHoursRepository.findByRestaurantIdIn(List.of(1L))).thenReturn(List.of(MONDAY_LUNCH));
+
+        List<Restaurant> restaurants = gateway.findByOwnerIds(List.of(7L));
+
+        assertEquals(1, restaurants.size());
+        assertEquals(7L, restaurants.get(0).getOwnerId());
+        assertEquals(DayOfWeek.MONDAY, restaurants.get(0).getOpeningHours().get(0).getDayOfWeek());
+        assertTrue(gateway.findByOwnerIds(List.of()).isEmpty());
+        verify(restaurantRepository, times(1)).findByOwnerIdInOrderByIdAsc(any());
+    }
+
+    @Test
     void shouldDelegateExistenceChecks() {
         when(restaurantRepository.existsById(1L)).thenReturn(true);
         when(restaurantRepository.existsByCnpj("12345678000199")).thenReturn(true);

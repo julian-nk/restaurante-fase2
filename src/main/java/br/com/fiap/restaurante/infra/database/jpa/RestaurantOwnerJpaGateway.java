@@ -1,6 +1,8 @@
 package br.com.fiap.restaurante.infra.database.jpa;
 
+import br.com.fiap.restaurante.core.domain.Restaurant;
 import br.com.fiap.restaurante.core.domain.RestaurantOwner;
+import br.com.fiap.restaurante.core.gateway.RestaurantGateway;
 import br.com.fiap.restaurante.core.gateway.RestaurantOwnerGateway;
 import br.com.fiap.restaurante.infra.database.jpa.PersonPersistence.PersonRecord;
 import br.com.fiap.restaurante.infra.database.jpa.entity.RestaurantOwnerEntity;
@@ -12,26 +14,30 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
-/**
- * Grava e lê o papel junto com os dados da pessoa (via {@link PersonPersistence}), já que o domínio trata
- * {@link RestaurantOwner} como uma pessoa.
- */
 @Component
 public class RestaurantOwnerJpaGateway extends JpaGatewaySupport implements RestaurantOwnerGateway {
 
     private final RestaurantOwnerRepository restaurantOwnerRepository;
     private final PersonPersistence personPersistence;
     private final RestaurantOwnerMapper mapper;
+    private final RestaurantGateway restaurantGateway;
 
     public RestaurantOwnerJpaGateway(
             RestaurantOwnerRepository restaurantOwnerRepository,
             PersonPersistence personPersistence,
-            RestaurantOwnerMapper mapper
+            RestaurantOwnerMapper mapper,
+            RestaurantGateway restaurantGateway
     ) {
         this.restaurantOwnerRepository = restaurantOwnerRepository;
         this.personPersistence = personPersistence;
         this.mapper = mapper;
+        this.restaurantGateway = restaurantGateway;
+    }
+
+    private List<Restaurant> restaurantsOf(Long ownerId) {
+        return restaurantGateway.findByOwnerIds(List.of(ownerId));
     }
 
     @Override
@@ -39,9 +45,10 @@ public class RestaurantOwnerJpaGateway extends JpaGatewaySupport implements Rest
     public RestaurantOwner save(RestaurantOwner restaurantOwner) {
         return call(() -> {
             PersonRecord person = personPersistence.save(restaurantOwner);
-            RestaurantOwnerEntity saved = restaurantOwnerRepository.save(mapper.map(person.person().getId(), restaurantOwner));
+            RestaurantOwnerEntity saved = restaurantOwnerRepository.save(
+                    mapper.map(person.person().getId(), restaurantOwner));
             restaurantOwnerRepository.flush();
-            return mapper.map(person.person(), person.address(), saved);
+            return mapper.map(person.person(), person.address(), saved, restaurantsOf(saved.getPersonId()));
         });
     }
 
@@ -49,7 +56,12 @@ public class RestaurantOwnerJpaGateway extends JpaGatewaySupport implements Rest
     @Transactional(readOnly = true)
     public Optional<RestaurantOwner> findById(Long id) {
         return call(() -> restaurantOwnerRepository.findById(id).flatMap(role -> personPersistence.findById(id)
-                .map(person -> mapper.map(person.person(), person.address(), role))));
+                                                                                                  .map(person -> mapper.map(
+                                                                                                          person.person(),
+                                                                                                          person.address(),
+                                                                                                          role,
+                                                                                                          restaurantsOf(
+                                                                                                                  id)))));
     }
 
     @Override
@@ -57,15 +69,19 @@ public class RestaurantOwnerJpaGateway extends JpaGatewaySupport implements Rest
     public List<RestaurantOwner> findAll() {
         return call(() -> {
             List<RestaurantOwnerEntity> roles = restaurantOwnerRepository.findAll();
-            Map<Long, PersonRecord> persons = personPersistence.findAllById(
-                    roles.stream().map(RestaurantOwnerEntity::getPersonId).toList());
+            List<Long> ownerIds = roles.stream().map(RestaurantOwnerEntity::getPersonId).toList();
+            Map<Long, PersonRecord> persons = personPersistence.findAllById(ownerIds);
+            Map<Long, List<Restaurant>> restaurants = restaurantGateway.findByOwnerIds(ownerIds).stream()
+                                                                       .collect(Collectors.groupingBy(
+                                                                               Restaurant::getOwnerId));
 
             return roles.stream()
-                    .map(role -> {
-                        PersonRecord person = persons.get(role.getPersonId());
-                        return mapper.map(person.person(), person.address(), role);
-                    })
-                    .toList();
+                        .map(role -> {
+                            PersonRecord person = persons.get(role.getPersonId());
+                            return mapper.map(person.person(), person.address(), role,
+                                              restaurants.getOrDefault(role.getPersonId(), List.of()));
+                        })
+                        .toList();
         });
     }
 

@@ -2,6 +2,7 @@ package br.com.fiap.restaurante.core.gateway;
 
 import br.com.fiap.restaurante.core.domain.Restaurant;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,6 +20,8 @@ public interface RestaurantGateway {
     boolean existsByCnpj(String cnpj);
 
     boolean existsByOwnerId(Long ownerId);
+
+    List<Restaurant> findByOwnerIds(Collection<Long> ownerIds);
 
     /** Remove o restaurante, os horários de funcionamento e o endereço. */
     void deleteById(Long id);

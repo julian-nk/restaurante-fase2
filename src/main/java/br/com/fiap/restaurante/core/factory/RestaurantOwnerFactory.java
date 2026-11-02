@@ -1,10 +1,12 @@
 package br.com.fiap.restaurante.core.factory;
 
 import br.com.fiap.restaurante.core.domain.Address;
+import br.com.fiap.restaurante.core.domain.Restaurant;
 import br.com.fiap.restaurante.core.domain.RestaurantOwner;
 import br.com.fiap.restaurante.core.dto.CreateRestaurantOwnerInputDto;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 public interface RestaurantOwnerFactory {
 
@@ -17,6 +19,7 @@ public interface RestaurantOwnerFactory {
             String cpf,
             Address address,
             OffsetDateTime createdOn,
-            String businessEmail
+            String businessEmail,
+            List<Restaurant> ownedRestaurants
     );
 }

@@ -46,7 +46,9 @@ public class OpenApiConfiguration {
             Map.entry("OpeningHoursOutputDto", "Horário de funcionamento em um dia da semana."),
             Map.entry("PersonOutputDto", "Pessoa cadastrada, tenha ela papel (cliente ou dono de restaurante) ou não."),
             Map.entry("RestaurantOutputDto", "Restaurante, com endereço e horários de funcionamento."),
-            Map.entry("RestaurantOwnerOutputDto", "Dono de restaurante, com os dados da pessoa."),
+            Map.entry("RestaurantOwnerOutputDto", "Dono de restaurante, com os dados da pessoa e os restaurantes dele."),
+            Map.entry("RestaurantSummaryOutputDto", "Resumo de um restaurante. Os dados completos, com endereço e "
+                                                    + "horários, ficam em /api/restaurants/{id}."),
             Map.entry("UserTypeOutputDto", "Tipo de usuário.")
     );
 
@@ -79,6 +81,7 @@ public class OpenApiConfiguration {
             Map.entry("cnpj", "CNPJ, somente dígitos."),
             Map.entry("cuisineType", "Tipo de cozinha."),
             Map.entry("ownerId", "ID do dono do restaurante (o ID da pessoa)."),
+            Map.entry("restaurants", "Restaurantes de que a pessoa é dona, em ordem de ID."),
             Map.entry("openingHours", "Horários de funcionamento."),
             Map.entry("dayOfWeek", "Dia da semana, em inglês (MONDAY a SUNDAY)."),
             Map.entry("openingTime", "Horário de abertura."),

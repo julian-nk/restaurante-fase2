@@ -265,6 +265,8 @@ class RestauranteIntegrationTest {
                 restaurantController.findById(created.id()).openingHours().stream()
                         .map(OpeningHoursOutputDto::dayOfWeek).toList());
         assertEquals(1, restaurantController.findAll().size());
+        assertEquals(List.of(new RestaurantSummaryOutputDto(created.id(), "Cantina Nova", "22222222000122", "Italiana")),
+                     restaurantOwnerController.findById(ownerId).restaurants());
 
         assertThrows(CnpjAlreadyRegisteredException.class, () -> restaurantController.create(new CreateRestaurantInputDto(
                 "Outra", "22222222000122", "Japonesa", ownerId, ADDRESS, List.of(hours(DayOfWeek.MONDAY, 11, 15))),
@@ -274,6 +276,7 @@ class RestauranteIntegrationTest {
         restaurantController.delete(created.id(), owner);
         assertThrows(RestaurantNotFoundException.class, () -> restaurantController.findById(created.id()));
         assertFalse(addressRepository.existsById(created.address().id()));
+        assertTrue(restaurantOwnerController.findById(ownerId).restaurants().isEmpty());
 
         restaurantOwnerController.delete(ownerId);
         assertThrows(RestaurantOwnerNotFoundException.class, () -> restaurantOwnerController.findById(ownerId));

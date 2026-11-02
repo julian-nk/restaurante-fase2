@@ -2,14 +2,21 @@ package br.com.fiap.restaurante.core.domain;
 
 import br.com.fiap.restaurante.core.dto.AddressInputDto;
 import br.com.fiap.restaurante.core.dto.CreateCustomerInputDto;
+import br.com.fiap.restaurante.core.dto.CreateRestaurantInputDto;
 import br.com.fiap.restaurante.core.dto.CreateRestaurantOwnerInputDto;
+import br.com.fiap.restaurante.core.dto.OpeningHoursInputDto;
 import br.com.fiap.restaurante.core.exception.InvalidFieldException;
 import br.com.fiap.restaurante.core.factory.impl.AddressFactoryImpl;
 import br.com.fiap.restaurante.core.factory.impl.CustomerFactoryImpl;
+import br.com.fiap.restaurante.core.factory.impl.OpeningHoursFactoryImpl;
+import br.com.fiap.restaurante.core.factory.impl.RestaurantFactoryImpl;
 import br.com.fiap.restaurante.core.factory.impl.RestaurantOwnerFactoryImpl;
 import org.junit.jupiter.api.Test;
 
+import java.time.DayOfWeek;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -22,6 +29,25 @@ class CustomerAndRestaurantOwnerTest {
     private final AddressFactoryImpl addressFactory = new AddressFactoryImpl();
     private final CustomerFactoryImpl customerFactory = new CustomerFactoryImpl(addressFactory);
     private final RestaurantOwnerFactoryImpl ownerFactory = new RestaurantOwnerFactoryImpl(addressFactory);
+    private final RestaurantFactoryImpl restaurantFactory =
+            new RestaurantFactoryImpl(addressFactory, new OpeningHoursFactoryImpl());
+
+    private Restaurant restaurant(Long id, Long ownerId) {
+        Restaurant created = restaurantFactory.create(new CreateRestaurantInputDto(
+                "Cantina " + id, "12345678000199", "Italiana", ownerId, ADDRESS,
+                List.of(new OpeningHoursInputDto(DayOfWeek.MONDAY, LocalTime.of(11, 0), LocalTime.of(15, 0)))));
+        return restaurantFactory.restore(id, created.getName(), created.getCnpj(), created.getCuisineType(),
+                                         created.getOwnerId(), created.getAddress(), created.getOpeningHours());
+    }
+
+    private RestaurantOwner owner3(List<Restaurant> restaurants) {
+        return ownerFactory.restore(3L, "João", "joao@email.com", "11144477735", null, CREATED_ON,
+                                    "contato@cantina.com", restaurants);
+    }
+
+    private static List<Long> ids(RestaurantOwner owner) {
+        return owner.getOwnedRestaurants().stream().map(Restaurant::getId).toList();
+    }
 
     @Test
     void shouldCreateCustomerForNewPerson() {
@@ -82,12 +108,47 @@ class CustomerAndRestaurantOwnerTest {
         RestaurantOwner created = ownerFactory.create(null, new CreateRestaurantOwnerInputDto(
                 "João", "joao@email.com", "11144477735", null, "contato@cantina.com"));
         RestaurantOwner restored = ownerFactory.restore(
-                3L, "João", "joao@email.com", "11144477735", null, CREATED_ON, "contato@cantina.com");
+                3L, "João", "joao@email.com", "11144477735", null, CREATED_ON, "contato@cantina.com", List.of());
 
         assertEquals("contato@cantina.com", created.getBusinessEmail());
         assertTrue(created.getOwnedRestaurants().isEmpty());
         assertEquals(3L, restored.getId());
         assertEquals(CREATED_ON, restored.getCreatedOn());
+    }
+
+    @Test
+    void shouldRestoreOwnerWithTheirRestaurants() {
+        RestaurantOwner owner = owner3(List.of(restaurant(10L, 3L), restaurant(11L, 3L)));
+
+        assertTrue(owner.hasRestaurants());
+        assertEquals(List.of(10L, 11L), ids(owner));
+        assertThrows(UnsupportedOperationException.class, () -> owner.getOwnedRestaurants().clear());
+    }
+
+    @Test
+    void shouldOnlyAcceptRestaurantsOfTheOwner() {
+        RestaurantOwner owner = owner3(List.of());
+        Restaurant ofAnotherOwner = restaurant(10L, 4L);
+
+        assertThrows(InvalidFieldException.class, () -> owner.addRestaurant(ofAnotherOwner));
+        assertThrows(InvalidFieldException.class, () -> owner3(List.of(ofAnotherOwner)));
+        assertFalse(owner.hasRestaurants());
+
+        RestaurantOwner newOwner = ownerFactory.create(null, new CreateRestaurantOwnerInputDto(
+                "João", "joao@email.com", "11144477735", null, "contato@cantina.com"));
+        assertThrows(InvalidFieldException.class, () -> newOwner.addRestaurant(restaurant(10L, 3L)));
+    }
+
+    @Test
+    void shouldAddAndRemoveRestaurantsById() {
+        RestaurantOwner owner = owner3(List.of(restaurant(10L, 3L)));
+
+        owner.addRestaurant(restaurant(10L, 3L)); // o mesmo restaurante, de novo: substitui, não duplica
+        owner.addRestaurant(restaurant(11L, 3L));
+        assertEquals(List.of(10L, 11L), ids(owner));
+
+        owner.removeRestaurant(restaurant(10L, 3L));
+        assertEquals(List.of(11L), ids(owner));
     }
 
     @Test

@@ -13,6 +13,7 @@ import br.com.fiap.restaurante.infra.database.mapper.RestaurantMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -71,28 +72,39 @@ public class RestaurantJpaGateway extends JpaGatewaySupport implements Restauran
     @Override
     @Transactional(readOnly = true)
     public List<Restaurant> findAll() {
-        return call(() -> {
-            List<RestaurantEntity> restaurants = restaurantRepository.findAll();
-            if (restaurants.isEmpty()) {
-                return List.of();
-            }
+        return call(() -> toDomain(restaurantRepository.findAll()));
+    }
 
-            Map<Long, AddressEntity> addresses = addressRepository
-                    .findAllById(restaurants.stream().map(RestaurantEntity::getAddressId).toList())
-                    .stream()
-                    .collect(Collectors.toMap(AddressEntity::getId, Function.identity()));
-            Map<Long, List<OpeningHoursEntity>> openingHours = openingHoursRepository
-                    .findByRestaurantIdIn(restaurants.stream().map(RestaurantEntity::getId).toList())
-                    .stream()
-                    .collect(Collectors.groupingBy(OpeningHoursEntity::getRestaurantId));
+    @Override
+    @Transactional(readOnly = true)
+    public List<Restaurant> findByOwnerIds(Collection<Long> ownerIds) {
+        if (ownerIds.isEmpty()) {
+            return List.of();
+        }
+        return call(() -> toDomain(restaurantRepository.findByOwnerIdInOrderByIdAsc(ownerIds)));
+    }
 
-            return restaurants.stream()
-                    .map(entity -> restaurantMapper.map(
-                            entity,
-                            addresses.get(entity.getAddressId()),
-                            openingHours.getOrDefault(entity.getId(), List.of())))
-                    .toList();
-        });
+    /** Monta os restaurantes com os endereços e os horários, buscados com uma consulta para cada tabela. */
+    private List<Restaurant> toDomain(List<RestaurantEntity> restaurants) {
+        if (restaurants.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, AddressEntity> addresses = addressRepository
+                .findAllById(restaurants.stream().map(RestaurantEntity::getAddressId).toList())
+                .stream()
+                .collect(Collectors.toMap(AddressEntity::getId, Function.identity()));
+        Map<Long, List<OpeningHoursEntity>> openingHours = openingHoursRepository
+                .findByRestaurantIdIn(restaurants.stream().map(RestaurantEntity::getId).toList())
+                .stream()
+                .collect(Collectors.groupingBy(OpeningHoursEntity::getRestaurantId));
+
+        return restaurants.stream()
+                .map(entity -> restaurantMapper.map(
+                        entity,
+                        addresses.get(entity.getAddressId()),
+                        openingHours.getOrDefault(entity.getId(), List.of())))
+                .toList();
     }
 
     @Override

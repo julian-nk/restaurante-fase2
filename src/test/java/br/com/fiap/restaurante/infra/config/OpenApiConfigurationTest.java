@@ -72,7 +72,11 @@ public class OpenApiConfigurationTest {
                 .andExpect(jsonPath("$.components.schemas.UserTypeOutputDto.properties.code.description")
                         .value("Código único do tipo de usuário."))
                 .andExpect(jsonPath("$.components.schemas.PersonOutputDto.description")
-                        .value("Pessoa cadastrada, tenha ela papel (cliente ou dono de restaurante) ou não."));
+                        .value("Pessoa cadastrada, tenha ela papel (cliente ou dono de restaurante) ou não."))
+                .andExpect(jsonPath("$.components.schemas.RestaurantOwnerOutputDto.properties.restaurants.description")
+                        .value("Restaurantes de que a pessoa é dona, em ordem de ID."))
+                .andExpect(jsonPath("$.components.schemas.RestaurantSummaryOutputDto.properties.cnpj.description")
+                        .value("CNPJ, somente dígitos."));
     }
 
     @Test

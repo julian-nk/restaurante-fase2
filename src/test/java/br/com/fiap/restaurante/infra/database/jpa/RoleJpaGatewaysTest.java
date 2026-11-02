@@ -1,10 +1,18 @@
 package br.com.fiap.restaurante.infra.database.jpa;
 
 import br.com.fiap.restaurante.core.domain.Customer;
+import br.com.fiap.restaurante.core.domain.Restaurant;
 import br.com.fiap.restaurante.core.domain.RestaurantOwner;
+import br.com.fiap.restaurante.core.domain.StatesEnum;
+import br.com.fiap.restaurante.core.dto.AddressInputDto;
+import br.com.fiap.restaurante.core.dto.CreateRestaurantInputDto;
+import br.com.fiap.restaurante.core.dto.OpeningHoursInputDto;
 import br.com.fiap.restaurante.core.factory.impl.AddressFactoryImpl;
 import br.com.fiap.restaurante.core.factory.impl.CustomerFactoryImpl;
+import br.com.fiap.restaurante.core.factory.impl.OpeningHoursFactoryImpl;
+import br.com.fiap.restaurante.core.factory.impl.RestaurantFactoryImpl;
 import br.com.fiap.restaurante.core.factory.impl.RestaurantOwnerFactoryImpl;
+import br.com.fiap.restaurante.core.gateway.RestaurantGateway;
 import br.com.fiap.restaurante.infra.database.jpa.PersonPersistence.PersonRecord;
 import br.com.fiap.restaurante.infra.database.jpa.entity.CustomerEntity;
 import br.com.fiap.restaurante.infra.database.jpa.entity.PersonEntity;
@@ -17,6 +25,8 @@ import br.com.fiap.restaurante.infra.database.mapper.RestaurantOwnerMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.time.DayOfWeek;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -70,9 +80,17 @@ class RoleJpaGatewaysTest {
     void restaurantOwnerGatewayShouldSavePersonAndRoleTogether() {
         RestaurantOwnerRepository repository = mock(RestaurantOwnerRepository.class);
         PersonPersistence persistence = mock(PersonPersistence.class);
+        RestaurantGateway restaurantGateway = mock(RestaurantGateway.class);
         RestaurantOwnerFactoryImpl factory = new RestaurantOwnerFactoryImpl(addressFactory);
         RestaurantOwnerJpaGateway gateway = new RestaurantOwnerJpaGateway(repository, persistence,
-                new RestaurantOwnerMapper(factory, addressMapper));
+                new RestaurantOwnerMapper(factory, addressMapper), restaurantGateway);
+        RestaurantFactoryImpl restaurantFactory = new RestaurantFactoryImpl(addressFactory, new OpeningHoursFactoryImpl());
+        Restaurant created = restaurantFactory.create(new CreateRestaurantInputDto("Cantina", "12345678000199",
+                "Italiana", 5L, new AddressInputDto("Rua A", "10", null, "Centro", "Campinas", StatesEnum.SP, "13010000"),
+                List.of(new OpeningHoursInputDto(DayOfWeek.MONDAY, LocalTime.of(11, 0), LocalTime.of(15, 0)))));
+        Restaurant restaurantOfMaria = restaurantFactory.restore(10L, created.getName(), created.getCnpj(),
+                created.getCuisineType(), 5L, created.getAddress(), created.getOpeningHours());
+        when(restaurantGateway.findByOwnerIds(List.of(5L))).thenReturn(List.of(restaurantOfMaria));
         RestaurantOwnerEntity entity = new RestaurantOwnerEntity(5L, CREATED_ON, "contato@cantina.com");
         when(persistence.save(any())).thenReturn(PERSON);
         when(persistence.findById(5L)).thenReturn(Optional.of(PERSON));
@@ -83,7 +101,7 @@ class RoleJpaGatewaysTest {
         when(repository.existsById(5L)).thenReturn(true);
 
         RestaurantOwner saved = gateway.save(factory.restore(
-                null, "Maria", "maria@email.com", "52998224725", null, CREATED_ON, "contato@cantina.com"));
+                null, "Maria", "maria@email.com", "52998224725", null, CREATED_ON, "contato@cantina.com", List.of()));
 
         ArgumentCaptor<RestaurantOwnerEntity> role = ArgumentCaptor.forClass(RestaurantOwnerEntity.class);
         verify(repository).save(role.capture());
@@ -92,6 +110,10 @@ class RoleJpaGatewaysTest {
         assertEquals("contato@cantina.com", saved.getBusinessEmail());
         assertEquals("Maria", gateway.findById(5L).orElseThrow().getName());
         assertEquals(1, gateway.findAll().size());
+        // os restaurantes do dono vêm preenchidos em todas as leituras, inclusive na volta do save
+        assertEquals(List.of(restaurantOfMaria), saved.getOwnedRestaurants());
+        assertEquals(List.of(restaurantOfMaria), gateway.findById(5L).orElseThrow().getOwnedRestaurants());
+        assertEquals(List.of(restaurantOfMaria), gateway.findAll().get(0).getOwnedRestaurants());
         assertTrue(gateway.existsById(5L));
         gateway.deleteById(5L);
         verify(repository).deleteById(5L);

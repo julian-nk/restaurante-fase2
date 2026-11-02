@@ -3,6 +3,7 @@ package br.com.fiap.restaurante.core.dto;
 import br.com.fiap.restaurante.core.domain.RestaurantOwner;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 public record RestaurantOwnerOutputDto(
         Long id,
@@ -11,7 +12,8 @@ public record RestaurantOwnerOutputDto(
         String cpf,
         AddressOutputDto address,
         String businessEmail,
-        OffsetDateTime createdOn
+        OffsetDateTime createdOn,
+        List<RestaurantSummaryOutputDto> restaurants
 ) {
 
     public static RestaurantOwnerOutputDto from(RestaurantOwner owner) {
@@ -22,7 +24,8 @@ public record RestaurantOwnerOutputDto(
                 owner.getCpf(),
                 AddressOutputDto.from(owner.getAddress()),
                 owner.getBusinessEmail(),
-                owner.getCreatedOn()
+                owner.getCreatedOn(),
+                owner.getOwnedRestaurants().stream().map(RestaurantSummaryOutputDto::from).toList()
         );
     }
 }

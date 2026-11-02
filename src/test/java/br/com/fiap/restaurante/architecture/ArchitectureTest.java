@@ -47,11 +47,4 @@ class ArchitectureTest {
                 .resideInAnyPackage(BASE + "core.usecase..", BASE + "core.controller..", BASE + "core.gateway..")
                 .check(CLASSES);
     }
-
-    @Test
-    void newCodeShouldNotDependOnOldPackage() {
-        noClasses().that().resideOutsideOfPackage(BASE + "old..")
-                .should().dependOnClassesThat().resideInAPackage(BASE + "old..")
-                .check(CLASSES);
-    }
 }

@@ -97,7 +97,8 @@ class RegistrationControllersTest {
         var controller = new RestaurantOwnerController(register, getAll, getById, update, delete);
 
         var output = new RestaurantOwnerOutputDto(
-                5L, "Maria", "maria@email.com", "52998224725", null, "contato@cantina.com", OffsetDateTime.now());
+                5L, "Maria", "maria@email.com", "52998224725", null, "contato@cantina.com", OffsetDateTime.now(),
+                List.of());
         var registerInput = new CreateRestaurantOwnerInputDto(
                 "Maria", "maria@email.com", "52998224725", null, "contato@cantina.com");
         var updateInput = new UpdateRestaurantOwnerInputDto(5L, "Maria", "maria@email.com", null, "contato@cantina.com");

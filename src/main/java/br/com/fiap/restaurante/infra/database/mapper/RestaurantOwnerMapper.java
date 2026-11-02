@@ -1,11 +1,14 @@
 package br.com.fiap.restaurante.infra.database.mapper;
 
+import br.com.fiap.restaurante.core.domain.Restaurant;
 import br.com.fiap.restaurante.core.domain.RestaurantOwner;
 import br.com.fiap.restaurante.core.factory.RestaurantOwnerFactory;
 import br.com.fiap.restaurante.infra.database.jpa.entity.AddressEntity;
 import br.com.fiap.restaurante.infra.database.jpa.entity.PersonEntity;
 import br.com.fiap.restaurante.infra.database.jpa.entity.RestaurantOwnerEntity;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class RestaurantOwnerMapper {
@@ -18,8 +21,12 @@ public class RestaurantOwnerMapper {
         this.addressMapper = addressMapper;
     }
 
-    /** @param address pode ser nulo (pessoa sem endereço) */
-    public RestaurantOwner map(PersonEntity person, AddressEntity address, RestaurantOwnerEntity owner) {
+    /**
+     * @param address     pode ser nulo (pessoa sem endereço)
+     * @param restaurants os restaurantes de que a pessoa é dona
+     */
+    public RestaurantOwner map(PersonEntity person, AddressEntity address, RestaurantOwnerEntity owner,
+                               List<Restaurant> restaurants) {
         return restaurantOwnerFactory.restore(
                 person.getId(),
                 person.getName(),
@@ -27,7 +34,8 @@ public class RestaurantOwnerMapper {
                 person.getCpf(),
                 address == null ? null : addressMapper.map(address),
                 owner.getCreatedOn(),
-                owner.getBusinessEmail()
+                owner.getBusinessEmail(),
+                restaurants
         );
     }
 

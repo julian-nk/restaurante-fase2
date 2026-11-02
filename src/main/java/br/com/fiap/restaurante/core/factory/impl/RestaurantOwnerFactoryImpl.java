@@ -1,13 +1,14 @@
 package br.com.fiap.restaurante.core.factory.impl;
 
 import br.com.fiap.restaurante.core.domain.Address;
+import br.com.fiap.restaurante.core.domain.Restaurant;
 import br.com.fiap.restaurante.core.domain.RestaurantOwner;
 import br.com.fiap.restaurante.core.dto.CreateRestaurantOwnerInputDto;
 import br.com.fiap.restaurante.core.factory.AddressFactory;
 import br.com.fiap.restaurante.core.factory.RestaurantOwnerFactory;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
+import java.util.List;
 
 public class RestaurantOwnerFactoryImpl implements RestaurantOwnerFactory {
 
@@ -27,7 +28,7 @@ public class RestaurantOwnerFactoryImpl implements RestaurantOwnerFactory {
                 .address(input.address() == null ? null : addressFactory.create(input.address()))
                 .createdOn(OffsetDateTime.now())
                 .businessEmail(input.businessEmail())
-                .ownedRestaurants(new ArrayList<>())
+                .ownedRestaurants(List.of())
                 .build();
     }
 
@@ -39,7 +40,8 @@ public class RestaurantOwnerFactoryImpl implements RestaurantOwnerFactory {
             String cpf,
             Address address,
             OffsetDateTime createdOn,
-            String businessEmail
+            String businessEmail,
+            List<Restaurant> ownedRestaurants
     ) {
         return RestaurantOwner.builder()
                 .id(id)
@@ -49,7 +51,7 @@ public class RestaurantOwnerFactoryImpl implements RestaurantOwnerFactory {
                 .address(address)
                 .createdOn(createdOn)
                 .businessEmail(businessEmail)
-                .ownedRestaurants(new ArrayList<>())
+                .ownedRestaurants(ownedRestaurants)
                 .build();
     }
 }

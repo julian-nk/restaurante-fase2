@@ -3843,7 +3843,8 @@
                           "pm.test('Status 200', () => pm.response.to.have.status(200));",
                           "const json = pm.response.json();",
                           "pm.test('ID é o do registro cadastrado', () => pm.expect(json.id).to.eql(Number(pm.collectionVariables.get('ownerId'))));",
-                          "pm.test('CPF é o cadastrado', () => pm.expect(json.cpf).to.eql(pm.collectionVariables.get('personCpf')));"
+                          "pm.test('CPF é o cadastrado', () => pm.expect(json.cpf).to.eql(pm.collectionVariables.get('personCpf')));",
+                          "pm.test('Dono recém-cadastrado ainda não tem restaurantes', () => pm.expect(json.restaurants).to.eql([]));"
                         ]
                       }
                     }
@@ -12408,6 +12409,42 @@
               ]
             },
             "description": "Autentica com o login e a senha do usuário criado no passo 2 (HTTP Basic)."
+          },
+          "response": []
+        },
+        {
+          "name": "11 - Conferir os restaurantes do dono",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('O restaurante cadastrado aparece entre os do dono', () => pm.expect(json.restaurants.map(item => item.id)).to.include(Number(pm.collectionVariables.get('restaurantId'))));",
+                  "pm.test('Cada restaurante vem em resumo: ID, nome, CNPJ e tipo de cozinha', () => pm.expect(json.restaurants[0]).to.have.all.keys('id', 'name', 'cnpj', 'cuisineType'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://{{host}}:{{port}}/api/restaurant-owners/{{ownerId}}",
+              "protocol": "http",
+              "host": [
+                "{{host}}"
+              ],
+              "port": "{{port}}",
+              "path": [
+                "api",
+                "restaurant-owners",
+                "{{ownerId}}"
+              ]
+            },
+            "description": "A resposta do dono traz, em restaurants, um resumo de cada restaurante dele."
           },
           "response": []
         }
