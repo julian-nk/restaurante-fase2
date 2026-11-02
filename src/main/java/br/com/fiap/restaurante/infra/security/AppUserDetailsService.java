@@ -5,7 +5,6 @@ import br.com.fiap.restaurante.infra.database.jpa.entity.UserTypeEntity;
 import br.com.fiap.restaurante.infra.database.jpa.repository.AppUserRepository;
 import br.com.fiap.restaurante.infra.database.jpa.repository.UserTypeRepository;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -37,9 +36,6 @@ public class AppUserDetailsService implements UserDetailsService {
                                                                        "ROLE_" + code.toUpperCase(Locale.ROOT)))
                                                                .toList();
 
-        return User.withUsername(user.getLogin())
-                   .password(user.getPasswordHash())
-                   .authorities(roles)
-                   .build();
+        return new AppUserPrincipal(user.getLogin(), user.getPasswordHash(), user.getPersonId(), roles);
     }
 }

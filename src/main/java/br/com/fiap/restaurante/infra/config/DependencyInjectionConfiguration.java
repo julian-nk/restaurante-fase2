@@ -169,13 +169,13 @@ public class DependencyInjectionConfiguration {
     }
 
     @Bean
-    public UpdateMenuItemUseCase updateMenuItemUseCase(MenuItemGateway gateway) {
-        return new UpdateMenuItemUseCaseImpl(gateway);
+    public UpdateMenuItemUseCase updateMenuItemUseCase(MenuItemGateway gateway, RestaurantGateway restaurantGateway) {
+        return new UpdateMenuItemUseCaseImpl(gateway, restaurantGateway);
     }
 
     @Bean
-    public DeleteMenuItemUseCase deleteMenuItemUseCase(MenuItemGateway gateway) {
-        return new DeleteMenuItemUseCaseImpl(gateway);
+    public DeleteMenuItemUseCase deleteMenuItemUseCase(MenuItemGateway gateway, RestaurantGateway restaurantGateway) {
+        return new DeleteMenuItemUseCaseImpl(gateway, restaurantGateway);
     }
 
     @Bean

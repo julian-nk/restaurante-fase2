@@ -3,14 +3,19 @@ package br.com.fiap.restaurante.infra.web;
 import br.com.fiap.restaurante.core.controller.MenuItemController;
 import br.com.fiap.restaurante.core.dto.CreateMenuItemInputDto;
 import br.com.fiap.restaurante.core.dto.MenuItemOutputDto;
+import br.com.fiap.restaurante.core.dto.RequesterDto;
 import br.com.fiap.restaurante.core.dto.UpdateMenuItemInputDto;
 import br.com.fiap.restaurante.core.exception.InvalidFieldException;
 import br.com.fiap.restaurante.core.exception.MenuItemNotFoundException;
+import br.com.fiap.restaurante.infra.security.AppUserPrincipal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -21,7 +26,6 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-// Sem os filtros (inclusive o Spring Security): aqui só interessa o mapeamento HTTP da API.
 @WebMvcTest(MenuItemApi.class)
 @AutoConfigureMockMvc(addFilters = false)
 class MenuItemApiTest {
@@ -29,6 +33,12 @@ class MenuItemApiTest {
     private static final BigDecimal PRICE = new BigDecimal("39.90");
     private static final MenuItemOutputDto PIZZA =
             new MenuItemOutputDto(1L, 1L, "Pizza", "Pizza de queijo", PRICE, false, null);
+
+    private static final AppUserPrincipal OWNER = new AppUserPrincipal(
+            "dono", "hash", 7L, AuthorityUtils.createAuthorityList("ROLE_RESTAURANT_OWNER"));
+    private static final Authentication LOGGED_OWNER =
+            UsernamePasswordAuthenticationToken.authenticated(OWNER, null, OWNER.getAuthorities());
+    private static final RequesterDto REQUESTER = new RequesterDto(7L, false);
 
     @Autowired
     private MockMvc mockMvc;
@@ -39,9 +49,11 @@ class MenuItemApiTest {
     @Test
     void shouldCreateMenuItem() throws Exception {
         when(menuItemController.create(
-                new CreateMenuItemInputDto(1L, "Pizza", "Pizza de queijo", PRICE, false, null))).thenReturn(PIZZA);
+                new CreateMenuItemInputDto(1L, "Pizza", "Pizza de queijo", PRICE, false, null), REQUESTER))
+                .thenReturn(PIZZA);
 
         mockMvc.perform(post("/api/menu-items")
+                        .principal(LOGGED_OWNER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"restaurantId": 1, "name": "Pizza", "description": "Pizza de queijo",
@@ -117,9 +129,11 @@ class MenuItemApiTest {
     void shouldUpdateMenuItem() throws Exception {
         var updated = new MenuItemOutputDto(1L, 1L, "Pizza grande", "Pizza de queijo", PRICE, true, null);
         when(menuItemController.update(
-                new UpdateMenuItemInputDto(1L, "Pizza grande", "Pizza de queijo", PRICE, true, null))).thenReturn(updated);
+                new UpdateMenuItemInputDto(1L, "Pizza grande", "Pizza de queijo", PRICE, true, null), REQUESTER))
+                .thenReturn(updated);
 
         mockMvc.perform(put("/api/menu-items/1")
+                        .principal(LOGGED_OWNER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name": "Pizza grande", "description": "Pizza de queijo",
@@ -132,9 +146,9 @@ class MenuItemApiTest {
 
     @Test
     void shouldDeleteMenuItem() throws Exception {
-        mockMvc.perform(delete("/api/menu-items/1"))
+        mockMvc.perform(delete("/api/menu-items/1").principal(LOGGED_OWNER))
                 .andExpect(status().isNoContent());
 
-        verify(menuItemController).delete(1L);
+        verify(menuItemController).delete(1L, REQUESTER);
     }
 }

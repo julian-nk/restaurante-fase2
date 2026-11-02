@@ -126,16 +126,17 @@ class RegistrationControllersTest {
         var output = new RestaurantOutputDto(1L, "Cantina", "12345678000199", "Italiana", 7L, null, List.of());
         var createInput = new CreateRestaurantInputDto("Cantina", "12345678000199", "Italiana", 7L, null, List.of());
         var updateInput = new UpdateRestaurantInputDto(1L, "Cantina", "Italiana", 7L, null, List.of());
-        when(create.execute(createInput)).thenReturn(output);
+        var requester = new RequesterDto(7L, false);
+        when(create.execute(createInput, requester)).thenReturn(output);
         when(getAll.execute()).thenReturn(List.of(output));
         when(getById.execute(1L)).thenReturn(output);
-        when(update.execute(updateInput)).thenReturn(output);
+        when(update.execute(updateInput, requester)).thenReturn(output);
 
-        assertSame(output, controller.create(createInput));
+        assertSame(output, controller.create(createInput, requester));
         assertEquals(List.of(output), controller.findAll());
         assertSame(output, controller.findById(1L));
-        assertSame(output, controller.update(updateInput));
-        controller.delete(1L);
-        verify(delete).execute(1L);
+        assertSame(output, controller.update(updateInput, requester));
+        controller.delete(1L, requester);
+        verify(delete).execute(1L, requester);
     }
 }

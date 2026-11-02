@@ -63,6 +63,11 @@ public class Restaurant {
         this.ownerId = validOwnerId;
     }
 
+    /** Se a pessoa informada é a dona do restaurante. */
+    public boolean isOwnedBy(Long personId) {
+        return ownerId.equals(personId);
+    }
+
     public void updateAddress(
             String street,
             String number,

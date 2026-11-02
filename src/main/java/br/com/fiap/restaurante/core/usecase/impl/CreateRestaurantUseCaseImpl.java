@@ -2,6 +2,7 @@ package br.com.fiap.restaurante.core.usecase.impl;
 
 import br.com.fiap.restaurante.core.domain.Restaurant;
 import br.com.fiap.restaurante.core.dto.CreateRestaurantInputDto;
+import br.com.fiap.restaurante.core.dto.RequesterDto;
 import br.com.fiap.restaurante.core.dto.RestaurantOutputDto;
 import br.com.fiap.restaurante.core.exception.CnpjAlreadyRegisteredException;
 import br.com.fiap.restaurante.core.exception.RestaurantOwnerNotFoundException;
@@ -27,8 +28,9 @@ public class CreateRestaurantUseCaseImpl implements CreateRestaurantUseCase {
     }
 
     @Override
-    public RestaurantOutputDto execute(CreateRestaurantInputDto input) {
+    public RestaurantOutputDto execute(CreateRestaurantInputDto input, RequesterDto requester) {
         Restaurant restaurant = restaurantFactory.create(input);
+        RestaurantAccess.requireCanManage(restaurant, requester);
 
         if (!restaurantOwnerGateway.existsById(restaurant.getOwnerId())) {
             throw new RestaurantOwnerNotFoundException(restaurant.getOwnerId());

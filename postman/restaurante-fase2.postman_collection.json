@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "3b3342c6-d461-5d1d-a17b-2f2f0f0de2c8",
     "name": "Restaurante Fase 2",
-    "description": "Testes da API do Tech Challenge — Fase 2 (gestão de restaurantes).\n\n## Como executar\n\n1. Suba a aplicação (`cd docker && docker compose up -d --build`).\n2. Importe este arquivo no Postman (*Import*).\n3. Rode a collection inteira no *Collection Runner* (ou pelo Newman), ou execute qualquer pasta de cenário, **na ordem das requisições**.\n\n```bash\nnpx newman run postman/restaurante-fase2.postman_collection.json\n```\n\n## Cenários autocontidos\n\nCada pasta de cenário cria os dados de que precisa nos primeiros passos (pessoa, dono, restaurante...) e guarda os IDs em variáveis da collection para os passos seguintes. Nenhum cenário depende de dados criados por outro.\n\nAntes de cada requisição, o script da collection gera valores únicos (`{{uid}}`, `{{randomCpf}}`, `{{randomCnpj}}`), então a collection pode ser executada quantas vezes for preciso sem conflito de CPF, CNPJ, e-mail, login ou código.\n\n## Variáveis\n\n| Variável | Padrão | Uso |\n| --- | --- | --- |\n| `host` | `localhost` | Host da API |\n| `port` | `8080` | Porta da API |\n| `authLogin` / `authPassword` | `admin` / `admin12345` | Usuário HTTP Basic (criado pela migration V3) |\n\nAs demais variáveis são preenchidas pelos próprios testes.\n\n## Autenticação\n\nA collection envia HTTP Basic com `authLogin`/`authPassword` em todas as requisições, o que atende o `SecurityConfig` com a autenticação ativa. Com a autenticação desativada, o cabeçalho é simplesmente ignorado.\n\n## Organização\n\nCada recurso tem uma pasta **CRUD** (fluxos de sucesso) e uma pasta **Validações** (campos obrigatórios, formatos, duplicidades, regras de negócio e registros inexistentes). A pasta **09 - Fluxo completo** percorre a jornada do dono de restaurante de ponta a ponta.\n",
+    "description": "Testes da API do Tech Challenge — Fase 2",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -5282,7 +5282,7 @@
                       "script": {
                         "type": "text/javascript",
                         "exec": [
-                          "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                          "pm.test('Status 200: a nova senha autentica', () => pm.response.to.have.status(200));"
                         ]
                       }
                     }
@@ -5291,7 +5291,7 @@
                     "method": "GET",
                     "header": [],
                     "url": {
-                      "raw": "http://{{host}}:{{port}}/api/app-users/{{appUserId}}",
+                      "raw": "http://{{host}}:{{port}}/api/menu-items",
                       "protocol": "http",
                       "host": [
                         "{{host}}"
@@ -5299,8 +5299,7 @@
                       "port": "{{port}}",
                       "path": [
                         "api",
-                        "app-users",
-                        "{{appUserId}}"
+                        "menu-items"
                       ]
                     },
                     "auth": {
@@ -5318,7 +5317,7 @@
                         }
                       ]
                     },
-                    "description": "Usa o login e a nova senha do usuário (HTTP Basic). Só faz diferença quando a autenticação está ativa no `SecurityConfig`."
+                    "description": "Usa o login e a nova senha do usuário (HTTP Basic). O usuário ainda não tem tipo, então acessa uma rota liberada para qualquer usuário autenticado: a consulta do cardápio."
                   },
                   "response": []
                 }
@@ -12413,6 +12412,1986 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "10 - Permissões",
+      "description": "Autenticação (HTTP Basic) e permissões por tipo de usuário. Usa os usuários iniciais `dono` (restaurant_owner) e `cliente` (customer), além do `admin` da collection. O dono só cadastra, altera e exclui os próprios restaurantes e pratos, e só o administrador transfere um restaurante para outro dono.",
+      "item": [
+        {
+          "name": "Sem login",
+          "item": [
+            {
+              "name": "Consultar o cardápio sem credenciais",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                      "const body = pm.response.json();",
+                      "pm.test('Código do erro: auth.unauthenticated', () => pm.expect(body.code).to.eql('auth.unauthenticated'));",
+                      "pm.test('Pede HTTP Basic', () => pm.expect(pm.response.headers.get('WWW-Authenticate')).to.include('Basic'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/menu-items",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "menu-items"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "description": "Sem o cabeçalho Authorization, nenhuma rota da API responde (só a documentação é aberta)."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Senha errada",
+          "item": [
+            {
+              "name": "Consultar o cardápio com senha errada",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                      "pm.test('Código do erro: auth.unauthenticated', () => pm.expect(pm.response.json().code).to.eql('auth.unauthenticated'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/menu-items",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "menu-items"
+                  ]
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{authLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "senhaErrada1",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Cliente só consulta",
+          "item": [
+            {
+              "name": "1 - Cadastrar dono de restaurante (admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Pré-condição: status 201', () => pm.response.to.have.status(201));",
+                      "pm.collectionVariables.set('ownerId', pm.response.json().id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/restaurant-owners",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "restaurant-owners"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Maria Souza\",\n    \"email\": \"maria.{{uid}}@email.com\",\n    \"cpf\": \"{{randomCpf}}\",\n    \"businessEmail\": \"contato.{{uid}}@cantinadanona.com.br\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "2 - Cadastrar restaurante (admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                      "pm.collectionVariables.set('restaurantId', pm.response.json().id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/restaurants",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "restaurants"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Cantina da Nona\",\n    \"cnpj\": \"{{randomCnpj}}\",\n    \"cuisineType\": \"Italiana\",\n    \"ownerId\": {{ownerId}},\n    \"address\": {\n        \"street\": \"Av. Paulista\",\n        \"number\": \"1000\",\n        \"neighborhood\": \"Bela Vista\",\n        \"city\": \"São Paulo\",\n        \"state\": \"SP\",\n        \"zipCode\": \"01310-100\"\n    },\n    \"openingHours\": [\n        {\n            \"dayOfWeek\": \"MONDAY\",\n            \"openingTime\": \"11:00\",\n            \"closingTime\": \"15:00\"\n        }\n    ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "3 - Cadastrar prato (admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                      "pm.collectionVariables.set('menuItemId', pm.response.json().id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/menu-items",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "menu-items"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"restaurantId\": {{restaurantId}},\n    \"name\": \"Feijoada completa\",\n    \"description\": \"Feijoada com arroz, couve, farofa e laranja.\",\n    \"price\": 59.9,\n    \"dineInOnly\": false,\n    \"photoUrl\": \"/fotos/pratos/feijoada.jpg\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "4 - Cliente consulta o cardápio do restaurante",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Vê o prato cadastrado', () => pm.expect(pm.response.json().map(item => item.id)).to.include(Number(pm.collectionVariables.get('menuItemId'))));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/menu-items/restaurant/{{restaurantId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "menu-items",
+                    "restaurant",
+                    "{{restaurantId}}"
+                  ]
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{customerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{customerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "5 - Cliente tenta cadastrar prato",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                      "const body = pm.response.json();",
+                      "pm.test('Código do erro: auth.forbidden', () => pm.expect(body.code).to.eql('auth.forbidden'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/menu-items",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "menu-items"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"restaurantId\": {{restaurantId}},\n    \"name\": \"Feijoada completa\",\n    \"description\": \"Feijoada com arroz, couve, farofa e laranja.\",\n    \"price\": 59.9,\n    \"dineInOnly\": false,\n    \"photoUrl\": \"/fotos/pratos/feijoada.jpg\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{customerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{customerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "6 - Cliente tenta alterar prato",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                      "const body = pm.response.json();",
+                      "pm.test('Código do erro: auth.forbidden', () => pm.expect(body.code).to.eql('auth.forbidden'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/menu-items/{{menuItemId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "menu-items",
+                    "{{menuItemId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Feijoada completa (serve 2)\",\n    \"description\": \"Feijoada com arroz, couve, farofa e laranja.\",\n    \"price\": 99.9,\n    \"dineInOnly\": false,\n    \"photoUrl\": \"/fotos/pratos/feijoada.jpg\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{customerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{customerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "7 - Cliente tenta excluir prato",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                      "const body = pm.response.json();",
+                      "pm.test('Código do erro: auth.forbidden', () => pm.expect(body.code).to.eql('auth.forbidden'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/menu-items/{{menuItemId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "menu-items",
+                    "{{menuItemId}}"
+                  ]
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{customerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{customerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "8 - Cliente tenta excluir restaurante",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                      "const body = pm.response.json();",
+                      "pm.test('Código do erro: auth.forbidden', () => pm.expect(body.code).to.eql('auth.forbidden'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/restaurants/{{restaurantId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "restaurants",
+                    "{{restaurantId}}"
+                  ]
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{customerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{customerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "9 - Cliente tenta listar tipos de usuário",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                      "const body = pm.response.json();",
+                      "pm.test('Código do erro: auth.forbidden', () => pm.expect(body.code).to.eql('auth.forbidden'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/user-types",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "user-types"
+                  ]
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{customerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{customerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "10 - Prato continua cadastrado",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Nome não mudou', () => pm.expect(pm.response.json().name).to.eql('Feijoada completa'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/menu-items/{{menuItemId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "menu-items",
+                    "{{menuItemId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "11 - Excluir restaurante (admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/restaurants/{{restaurantId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "restaurants",
+                    "{{restaurantId}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Dono de restaurante gerencia restaurante e cardápio",
+          "item": [
+            {
+              "name": "1 - Localizar a pessoa do usuário dono (admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Pré-condição: status 200', () => pm.response.to.have.status(200));",
+                      "const login = pm.variables.get('ownerLogin');",
+                      "const owner = pm.response.json().find(user => user.login === login);",
+                      "pm.test(`Pré-condição: usuário ${login} encontrado`, () => pm.expect(owner).to.be.an('object'));",
+                      "if (owner) {",
+                      "    pm.collectionVariables.set('ownerId', owner.personId);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/app-users",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "app-users"
+                  ]
+                },
+                "description": "O dono só cadastra restaurante em nome próprio: o ownerId tem que ser o ID da pessoa do usuário logado."
+              },
+              "response": []
+            },
+            {
+              "name": "2 - Cadastrar restaurante (dono)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                      "pm.collectionVariables.set('restaurantId', pm.response.json().id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/restaurants",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "restaurants"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Cantina da Nona\",\n    \"cnpj\": \"{{randomCnpj}}\",\n    \"cuisineType\": \"Italiana\",\n    \"ownerId\": {{ownerId}},\n    \"address\": {\n        \"street\": \"Av. Paulista\",\n        \"number\": \"1000\",\n        \"neighborhood\": \"Bela Vista\",\n        \"city\": \"São Paulo\",\n        \"state\": \"SP\",\n        \"zipCode\": \"01310-100\"\n    },\n    \"openingHours\": [\n        {\n            \"dayOfWeek\": \"MONDAY\",\n            \"openingTime\": \"11:00\",\n            \"closingTime\": \"15:00\"\n        }\n    ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "3 - Cadastrar prato (dono)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                      "pm.collectionVariables.set('menuItemId', pm.response.json().id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/menu-items",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "menu-items"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"restaurantId\": {{restaurantId}},\n    \"name\": \"Feijoada completa\",\n    \"description\": \"Feijoada com arroz, couve, farofa e laranja.\",\n    \"price\": 59.9,\n    \"dineInOnly\": false,\n    \"photoUrl\": \"/fotos/pratos/feijoada.jpg\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "4 - Dono altera prato",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('Preço atualizado', () => pm.expect(Number(pm.response.json().price)).to.eql(99.9));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/menu-items/{{menuItemId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "menu-items",
+                    "{{menuItemId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Feijoada completa (serve 2)\",\n    \"description\": \"Feijoada com arroz, couve, farofa e laranja.\",\n    \"price\": 99.9,\n    \"dineInOnly\": false,\n    \"photoUrl\": \"/fotos/pratos/feijoada.jpg\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "5 - Dono exclui prato",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/menu-items/{{menuItemId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "menu-items",
+                    "{{menuItemId}}"
+                  ]
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "6 - Dono tenta cadastrar tipo de usuário",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                      "const body = pm.response.json();",
+                      "pm.test('Código do erro: auth.forbidden', () => pm.expect(body.code).to.eql('auth.forbidden'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/user-types",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "user-types"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Gerente {{uid}}\",\n    \"code\": \"manager_{{uid}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "7 - Dono tenta se dar o tipo admin",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                      "const body = pm.response.json();",
+                      "pm.test('Código do erro: auth.forbidden', () => pm.expect(body.code).to.eql('auth.forbidden'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/app-users/1/types/5",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "app-users",
+                    "1",
+                    "types",
+                    "5"
+                  ]
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Associar tipos a usuários é só do administrador; senão, qualquer usuário poderia aumentar as próprias permissões."
+              },
+              "response": []
+            },
+            {
+              "name": "8 - Dono tenta listar pessoas",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                      "const body = pm.response.json();",
+                      "pm.test('Código do erro: auth.forbidden', () => pm.expect(body.code).to.eql('auth.forbidden'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/persons",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "persons"
+                  ]
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "9 - Dono exclui restaurante",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/restaurants/{{restaurantId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "restaurants",
+                    "{{restaurantId}}"
+                  ]
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Dono só mexe nos próprios restaurantes",
+          "item": [
+            {
+              "name": "1 - Cadastrar outro dono de restaurante (admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Pré-condição: status 201', () => pm.response.to.have.status(201));",
+                      "pm.collectionVariables.set('otherOwnerId', pm.response.json().id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/restaurant-owners",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "restaurant-owners"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"João Pereira\",\n    \"email\": \"joao.{{uid}}@email.com\",\n    \"cpf\": \"{{randomCpf}}\",\n    \"businessEmail\": \"contato.{{uid}}@vizinho.com.br\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "2 - Localizar a pessoa do usuário dono (admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Pré-condição: status 200', () => pm.response.to.have.status(200));",
+                      "const login = pm.variables.get('ownerLogin');",
+                      "const owner = pm.response.json().find(user => user.login === login);",
+                      "pm.test(`Pré-condição: usuário ${login} encontrado`, () => pm.expect(owner).to.be.an('object'));",
+                      "if (owner) {",
+                      "    pm.collectionVariables.set('ownerId', owner.personId);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/app-users",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "app-users"
+                  ]
+                },
+                "description": "O dono só cadastra restaurante em nome próprio: o ownerId tem que ser o ID da pessoa do usuário logado."
+              },
+              "response": []
+            },
+            {
+              "name": "3 - Cadastrar restaurante do outro dono (admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Pré-condição: status 201', () => pm.response.to.have.status(201));",
+                      "pm.collectionVariables.set('restaurantId', pm.response.json().id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/restaurants",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "restaurants"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Cantina do Vizinho\",\n    \"cnpj\": \"{{randomCnpj}}\",\n    \"cuisineType\": \"Italiana\",\n    \"ownerId\": {{otherOwnerId}},\n    \"address\": {\n        \"street\": \"Av. Paulista\",\n        \"number\": \"1000\",\n        \"neighborhood\": \"Bela Vista\",\n        \"city\": \"São Paulo\",\n        \"state\": \"SP\",\n        \"zipCode\": \"01310-100\"\n    },\n    \"openingHours\": [\n        {\n            \"dayOfWeek\": \"MONDAY\",\n            \"openingTime\": \"11:00\",\n            \"closingTime\": \"15:00\"\n        }\n    ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "4 - Cadastrar prato do outro dono (admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Pré-condição: status 201', () => pm.response.to.have.status(201));",
+                      "pm.collectionVariables.set('menuItemId', pm.response.json().id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/menu-items",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "menu-items"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"restaurantId\": {{restaurantId}},\n    \"name\": \"Moqueca baiana\",\n    \"description\": \"Moqueca de peixe com arroz e pirão.\",\n    \"price\": 89.9,\n    \"dineInOnly\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "5 - Dono tenta alterar restaurante de outro dono",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                      "const body = pm.response.json();",
+                      "pm.test('Código do erro: restaurant.notOwner', () => pm.expect(body.code).to.eql('restaurant.notOwner'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/restaurants/{{restaurantId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "restaurants",
+                    "{{restaurantId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Cantina do Vizinho\",\n    \"cuisineType\": \"Italiana\",\n    \"ownerId\": {{otherOwnerId}},\n    \"address\": {\n        \"street\": \"Av. Paulista\",\n        \"number\": \"1000\",\n        \"neighborhood\": \"Bela Vista\",\n        \"city\": \"São Paulo\",\n        \"state\": \"SP\",\n        \"zipCode\": \"01310-100\"\n    },\n    \"openingHours\": [\n        {\n            \"dayOfWeek\": \"MONDAY\",\n            \"openingTime\": \"11:00\",\n            \"closingTime\": \"15:00\"\n        }\n    ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "6 - Dono tenta excluir restaurante de outro dono",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                      "const body = pm.response.json();",
+                      "pm.test('Código do erro: restaurant.notOwner', () => pm.expect(body.code).to.eql('restaurant.notOwner'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/restaurants/{{restaurantId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "restaurants",
+                    "{{restaurantId}}"
+                  ]
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "7 - Dono tenta cadastrar prato em restaurante de outro dono",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                      "const body = pm.response.json();",
+                      "pm.test('Código do erro: restaurant.notOwner', () => pm.expect(body.code).to.eql('restaurant.notOwner'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/menu-items",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "menu-items"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"restaurantId\": {{restaurantId}},\n    \"name\": \"Moqueca baiana\",\n    \"description\": \"Moqueca de peixe com arroz e pirão.\",\n    \"price\": 89.9,\n    \"dineInOnly\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "8 - Dono tenta alterar prato de outro dono",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                      "const body = pm.response.json();",
+                      "pm.test('Código do erro: restaurant.notOwner', () => pm.expect(body.code).to.eql('restaurant.notOwner'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/menu-items/{{menuItemId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "menu-items",
+                    "{{menuItemId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Moqueca baiana\",\n    \"description\": \"Moqueca de peixe com arroz e pirão.\",\n    \"price\": 89.9,\n    \"dineInOnly\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "9 - Dono tenta excluir prato de outro dono",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                      "const body = pm.response.json();",
+                      "pm.test('Código do erro: restaurant.notOwner', () => pm.expect(body.code).to.eql('restaurant.notOwner'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/menu-items/{{menuItemId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "menu-items",
+                    "{{menuItemId}}"
+                  ]
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "10 - Dono tenta cadastrar restaurante em nome de outro dono",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                      "const body = pm.response.json();",
+                      "pm.test('Código do erro: restaurant.notOwner', () => pm.expect(body.code).to.eql('restaurant.notOwner'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/restaurants",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "restaurants"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Cantina do Vizinho 2\",\n    \"cnpj\": \"{{randomCnpj}}\",\n    \"cuisineType\": \"Italiana\",\n    \"ownerId\": {{otherOwnerId}},\n    \"address\": {\n        \"street\": \"Av. Paulista\",\n        \"number\": \"1000\",\n        \"neighborhood\": \"Bela Vista\",\n        \"city\": \"São Paulo\",\n        \"state\": \"SP\",\n        \"zipCode\": \"01310-100\"\n    },\n    \"openingHours\": [\n        {\n            \"dayOfWeek\": \"MONDAY\",\n            \"openingTime\": \"11:00\",\n            \"closingTime\": \"15:00\"\n        }\n    ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "11 - Restaurante e cardápio do outro dono continuam iguais",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                      "const json = pm.response.json();",
+                      "pm.test('O prato continua cadastrado', () => pm.expect(json.map(item => item.id)).to.include(Number(pm.collectionVariables.get('menuItemId'))));",
+                      "pm.test('O prato não foi alterado', () => pm.expect(json[0].name).to.eql('Moqueca baiana'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/menu-items/restaurant/{{restaurantId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "menu-items",
+                    "restaurant",
+                    "{{restaurantId}}"
+                  ]
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "12 - Dono cadastra restaurante próprio",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                      "const json = pm.response.json();",
+                      "pm.test('O dono é o próprio usuário', () => pm.expect(json.ownerId).to.eql(Number(pm.collectionVariables.get('ownerId'))));",
+                      "pm.collectionVariables.set('ownerRestaurantId', json.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/restaurants",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "restaurants"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Cantina do Dono\",\n    \"cnpj\": \"{{randomCnpj}}\",\n    \"cuisineType\": \"Italiana\",\n    \"ownerId\": {{ownerId}},\n    \"address\": {\n        \"street\": \"Av. Paulista\",\n        \"number\": \"1000\",\n        \"neighborhood\": \"Bela Vista\",\n        \"city\": \"São Paulo\",\n        \"state\": \"SP\",\n        \"zipCode\": \"01310-100\"\n    },\n    \"openingHours\": [\n        {\n            \"dayOfWeek\": \"MONDAY\",\n            \"openingTime\": \"11:00\",\n            \"closingTime\": \"15:00\"\n        }\n    ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "13 - Dono tenta transferir o restaurante para outro dono",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                      "const body = pm.response.json();",
+                      "pm.test('Código do erro: restaurant.transferNotAllowed', () => pm.expect(body.code).to.eql('restaurant.transferNotAllowed'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/restaurants/{{ownerRestaurantId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "restaurants",
+                    "{{ownerRestaurantId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Cantina do Dono\",\n    \"cuisineType\": \"Italiana\",\n    \"ownerId\": {{otherOwnerId}},\n    \"address\": {\n        \"street\": \"Av. Paulista\",\n        \"number\": \"1000\",\n        \"neighborhood\": \"Bela Vista\",\n        \"city\": \"São Paulo\",\n        \"state\": \"SP\",\n        \"zipCode\": \"01310-100\"\n    },\n    \"openingHours\": [\n        {\n            \"dayOfWeek\": \"MONDAY\",\n            \"openingTime\": \"11:00\",\n            \"closingTime\": \"15:00\"\n        }\n    ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Só o administrador pode trocar o dono de um restaurante."
+              },
+              "response": []
+            },
+            {
+              "name": "14 - Admin transfere o restaurante para o outro dono",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                      "const json = pm.response.json();",
+                      "pm.test('Novo dono', () => pm.expect(json.ownerId).to.eql(Number(pm.collectionVariables.get('otherOwnerId'))));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/restaurants/{{ownerRestaurantId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "restaurants",
+                    "{{ownerRestaurantId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Cantina do Dono\",\n    \"cuisineType\": \"Italiana\",\n    \"ownerId\": {{otherOwnerId}},\n    \"address\": {\n        \"street\": \"Av. Paulista\",\n        \"number\": \"1000\",\n        \"neighborhood\": \"Bela Vista\",\n        \"city\": \"São Paulo\",\n        \"state\": \"SP\",\n        \"zipCode\": \"01310-100\"\n    },\n    \"openingHours\": [\n        {\n            \"dayOfWeek\": \"MONDAY\",\n            \"openingTime\": \"11:00\",\n            \"closingTime\": \"15:00\"\n        }\n    ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "15 - Dono já não exclui o restaurante transferido",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                      "const body = pm.response.json();",
+                      "pm.test('Código do erro: restaurant.notOwner', () => pm.expect(body.code).to.eql('restaurant.notOwner'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/restaurants/{{ownerRestaurantId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "restaurants",
+                    "{{ownerRestaurantId}}"
+                  ]
+                },
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{ownerLogin}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{ownerPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "16 - Excluir restaurante transferido (admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/restaurants/{{ownerRestaurantId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "restaurants",
+                    "{{ownerRestaurantId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "17 - Excluir restaurante do outro dono (admin)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "http://{{host}}:{{port}}/api/restaurants/{{restaurantId}}",
+                  "protocol": "http",
+                  "host": [
+                    "{{host}}"
+                  ],
+                  "port": "{{port}}",
+                  "path": [
+                    "api",
+                    "restaurants",
+                    "{{restaurantId}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
     }
   ],
   "auth": {
@@ -12568,6 +14547,11 @@
       "type": "string"
     },
     {
+      "key": "ownerRestaurantId",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "menuItemId",
       "value": "",
       "type": "string"
@@ -12576,6 +14560,22 @@
       "key": "otherMenuItemId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "ownerLogin",
+      "value": "dono"
+    },
+    {
+      "key": "ownerPassword",
+      "value": "dono12345"
+    },
+    {
+      "key": "customerLogin",
+      "value": "cliente"
+    },
+    {
+      "key": "customerPassword",
+      "value": "cliente123"
     }
   ]
 }

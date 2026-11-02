@@ -3,7 +3,7 @@ package br.com.fiap.restaurante.core.usecase.impl;
 import br.com.fiap.restaurante.core.domain.MenuItem;
 import br.com.fiap.restaurante.core.dto.CreateMenuItemInputDto;
 import br.com.fiap.restaurante.core.dto.MenuItemOutputDto;
-import br.com.fiap.restaurante.core.exception.RestaurantNotFoundException;
+import br.com.fiap.restaurante.core.dto.RequesterDto;
 import br.com.fiap.restaurante.core.factory.MenuItemFactory;
 import br.com.fiap.restaurante.core.gateway.MenuItemGateway;
 import br.com.fiap.restaurante.core.gateway.RestaurantGateway;
@@ -26,12 +26,10 @@ public class CreateMenuItemUseCaseImpl implements CreateMenuItemUseCase {
     }
 
     @Override
-    public MenuItemOutputDto execute(CreateMenuItemInputDto input) {
+    public MenuItemOutputDto execute(CreateMenuItemInputDto input, RequesterDto requester) {
         MenuItem menuItem = menuItemFactory.create(input);
 
-        if (!restaurantGateway.existsById(menuItem.getRestaurantId())) {
-            throw new RestaurantNotFoundException(menuItem.getRestaurantId());
-        }
+        RestaurantAccess.findManageable(restaurantGateway, menuItem.getRestaurantId(), requester);
 
         return MenuItemOutputDto.from(menuItemGateway.save(menuItem));
     }

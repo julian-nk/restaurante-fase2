@@ -1,6 +1,7 @@
 package br.com.fiap.restaurante.core.controller;
 
 import br.com.fiap.restaurante.core.dto.CreateRestaurantInputDto;
+import br.com.fiap.restaurante.core.dto.RequesterDto;
 import br.com.fiap.restaurante.core.dto.RestaurantOutputDto;
 import br.com.fiap.restaurante.core.dto.UpdateRestaurantInputDto;
 import br.com.fiap.restaurante.core.usecase.CreateRestaurantUseCase;
@@ -33,8 +34,8 @@ public class RestaurantController {
         this.deleteRestaurantUseCase = deleteRestaurantUseCase;
     }
 
-    public RestaurantOutputDto create(CreateRestaurantInputDto input) {
-        return createRestaurantUseCase.execute(input);
+    public RestaurantOutputDto create(CreateRestaurantInputDto input, RequesterDto requester) {
+        return createRestaurantUseCase.execute(input, requester);
     }
 
     public List<RestaurantOutputDto> findAll() {
@@ -45,11 +46,11 @@ public class RestaurantController {
         return getRestaurantByIdUseCase.execute(id);
     }
 
-    public RestaurantOutputDto update(UpdateRestaurantInputDto input) {
-        return updateRestaurantUseCase.execute(input);
+    public RestaurantOutputDto update(UpdateRestaurantInputDto input, RequesterDto requester) {
+        return updateRestaurantUseCase.execute(input, requester);
     }
 
-    public void delete(Long id) {
-        deleteRestaurantUseCase.execute(id);
+    public void delete(Long id, RequesterDto requester) {
+        deleteRestaurantUseCase.execute(id, requester);
     }
 }

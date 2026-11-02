@@ -2,6 +2,7 @@ package br.com.fiap.restaurante.infra.web;
 
 import br.com.fiap.restaurante.core.controller.MenuItemController;
 import br.com.fiap.restaurante.core.dto.MenuItemOutputDto;
+import br.com.fiap.restaurante.infra.security.AppUserPrincipal;
 import br.com.fiap.restaurante.infra.web.json.CreateMenuItemJson;
 import br.com.fiap.restaurante.infra.web.json.UpdateMenuItemJson;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -38,12 +40,17 @@ public class MenuItemApi {
             @ApiResponse(responseCode = "201", description = "Prato cadastrado.",
                     content = @Content(schema = @Schema(implementation = MenuItemOutputDto.class))),
             @ApiResponse(responseCode = "400", description = "Dados inválidos: algum campo obrigatório faltando ou fora do formato."),
+            @ApiResponse(responseCode = "403", description = "Sem permissão: o tipo do usuário não pode cadastrar "
+                    + "pratos, ou o restaurante é de outro dono."),
             @ApiResponse(responseCode = "404", description = "Restaurante não encontrado.")
     })
-    public ResponseEntity<MenuItemOutputDto> create(@Valid @RequestBody CreateMenuItemJson json) {
+    public ResponseEntity<MenuItemOutputDto> create(
+            @Valid @RequestBody CreateMenuItemJson json,
+            @Parameter(hidden = true) Authentication authentication
+    ) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(menuItemController.create(json.toInputDto()));
+                .body(menuItemController.create(json.toInputDto(), AppUserPrincipal.requesterOf(authentication)));
     }
 
     @GetMapping
@@ -88,13 +95,17 @@ public class MenuItemApi {
             @ApiResponse(responseCode = "200", description = "Prato atualizado.",
                     content = @Content(schema = @Schema(implementation = MenuItemOutputDto.class))),
             @ApiResponse(responseCode = "400", description = "Dados inválidos: algum campo obrigatório faltando ou fora do formato."),
+            @ApiResponse(responseCode = "403", description = "Sem permissão: o tipo do usuário não pode alterar "
+                    + "pratos, ou o restaurante do prato é de outro dono."),
             @ApiResponse(responseCode = "404", description = "Prato não encontrado.")
     })
     public ResponseEntity<MenuItemOutputDto> update(
             @PathVariable Long id,
-            @Valid @RequestBody UpdateMenuItemJson json
+            @Valid @RequestBody UpdateMenuItemJson json,
+            @Parameter(hidden = true) Authentication authentication
     ) {
-        return ResponseEntity.ok(menuItemController.update(json.toInputDto(id)));
+        return ResponseEntity.ok(menuItemController.update(json.toInputDto(id),
+                                                           AppUserPrincipal.requesterOf(authentication)));
     }
 
     @DeleteMapping("/{id}")
@@ -102,10 +113,15 @@ public class MenuItemApi {
     @Parameter(in = ParameterIn.PATH, name = "id", description = "ID do prato", example = "1")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Prato excluído."),
+            @ApiResponse(responseCode = "403", description = "Sem permissão: o tipo do usuário não pode excluir "
+                    + "pratos, ou o restaurante do prato é de outro dono."),
             @ApiResponse(responseCode = "404", description = "Prato não encontrado.")
     })
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        menuItemController.delete(id);
+    public ResponseEntity<Void> delete(
+            @PathVariable Long id,
+            @Parameter(hidden = true) Authentication authentication
+    ) {
+        menuItemController.delete(id, AppUserPrincipal.requesterOf(authentication));
         return ResponseEntity.noContent().build();
     }
 }

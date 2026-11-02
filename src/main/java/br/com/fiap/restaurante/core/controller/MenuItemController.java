@@ -2,6 +2,7 @@ package br.com.fiap.restaurante.core.controller;
 
 import br.com.fiap.restaurante.core.dto.CreateMenuItemInputDto;
 import br.com.fiap.restaurante.core.dto.MenuItemOutputDto;
+import br.com.fiap.restaurante.core.dto.RequesterDto;
 import br.com.fiap.restaurante.core.dto.UpdateMenuItemInputDto;
 import br.com.fiap.restaurante.core.usecase.CreateMenuItemUseCase;
 import br.com.fiap.restaurante.core.usecase.DeleteMenuItemUseCase;
@@ -37,8 +38,8 @@ public class MenuItemController {
         this.deleteMenuItemUseCase = deleteMenuItemUseCase;
     }
 
-    public MenuItemOutputDto create(CreateMenuItemInputDto input) {
-        return createMenuItemUseCase.execute(input);
+    public MenuItemOutputDto create(CreateMenuItemInputDto input, RequesterDto requester) {
+        return createMenuItemUseCase.execute(input, requester);
     }
 
     public List<MenuItemOutputDto> findAll() {
@@ -53,11 +54,11 @@ public class MenuItemController {
         return getMenuItemsByRestaurantIdUseCase.execute(restaurantId);
     }
 
-    public MenuItemOutputDto update(UpdateMenuItemInputDto input) {
-        return updateMenuItemUseCase.execute(input);
+    public MenuItemOutputDto update(UpdateMenuItemInputDto input, RequesterDto requester) {
+        return updateMenuItemUseCase.execute(input, requester);
     }
 
-    public void delete(Long id) {
-        deleteMenuItemUseCase.execute(id);
+    public void delete(Long id, RequesterDto requester) {
+        deleteMenuItemUseCase.execute(id, requester);
     }
 }

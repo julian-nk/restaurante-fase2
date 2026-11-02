@@ -3,11 +3,12 @@ package br.com.fiap.restaurante.core.usecase.impl;
 import br.com.fiap.restaurante.core.domain.OpeningHours;
 import br.com.fiap.restaurante.core.domain.Restaurant;
 import br.com.fiap.restaurante.core.dto.AddressInputDto;
+import br.com.fiap.restaurante.core.dto.RequesterDto;
 import br.com.fiap.restaurante.core.dto.RestaurantOutputDto;
 import br.com.fiap.restaurante.core.dto.UpdateRestaurantInputDto;
 import br.com.fiap.restaurante.core.exception.InvalidFieldException;
-import br.com.fiap.restaurante.core.exception.RestaurantNotFoundException;
 import br.com.fiap.restaurante.core.exception.RestaurantOwnerNotFoundException;
+import br.com.fiap.restaurante.core.exception.RestaurantTransferNotAllowedException;
 import br.com.fiap.restaurante.core.factory.OpeningHoursFactory;
 import br.com.fiap.restaurante.core.gateway.RestaurantGateway;
 import br.com.fiap.restaurante.core.gateway.RestaurantOwnerGateway;
@@ -32,11 +33,14 @@ public class UpdateRestaurantUseCaseImpl implements UpdateRestaurantUseCase {
     }
 
     @Override
-    public RestaurantOutputDto execute(UpdateRestaurantInputDto input) {
-        Restaurant restaurant = restaurantGateway.findById(input.id())
-                .orElseThrow(() -> new RestaurantNotFoundException(input.id()));
+    public RestaurantOutputDto execute(UpdateRestaurantInputDto input, RequesterDto requester) {
+        Restaurant restaurant = RestaurantAccess.findManageable(restaurantGateway, input.id(), requester);
+        Long currentOwnerId = restaurant.getOwnerId();
 
         restaurant.update(input.name(), input.cuisineType(), input.ownerId());
+        if (!requester.admin() && !restaurant.isOwnedBy(currentOwnerId)) {
+            throw new RestaurantTransferNotAllowedException();
+        }
 
         AddressInputDto address = input.address();
         if (address == null) {

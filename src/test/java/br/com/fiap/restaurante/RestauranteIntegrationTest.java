@@ -20,10 +20,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Sobe o contexto completo (H2) e percorre core controller -> use case -> gateway JPA -> banco,
- * garantindo que a injeção de dependência e os mapeamentos estão corretos.
- */
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
@@ -31,6 +27,8 @@ class RestauranteIntegrationTest {
 
     private static final AddressInputDto ADDRESS =
             new AddressInputDto("Av. Paulista", "1000", null, "Bela Vista", "São Paulo", StatesEnum.SP, "01310-100");
+
+    private static final RequesterDto ADMIN = new RequesterDto(1L, true);
 
     @Autowired
     private UserTypeController userTypeController;
@@ -69,13 +67,19 @@ class RestauranteIntegrationTest {
         return new OpeningHoursInputDto(day, LocalTime.of(opening, 0), LocalTime.of(closing, 0));
     }
 
-    /** Cadastra o dono (com os dados da pessoa) e um restaurante dele, e devolve o restaurante. */
+    /** O próprio dono do restaurante, chamando os casos de uso. */
+    private static RequesterDto ownerOf(RestaurantOutputDto restaurant) {
+        return new RequesterDto(restaurant.ownerId(), false);
+    }
+
+    /** Cadastra o dono (com os dados da pessoa) e um restaurante dele, feito pelo próprio dono. */
     private RestaurantOutputDto createRestaurant(String cpf, String cnpj) {
         RestaurantOwnerOutputDto owner = restaurantOwnerController.register(new CreateRestaurantOwnerInputDto(
                 "Dono " + cpf, cpf + "@email.com", cpf, null, "contato" + cpf + "@cantina.com"));
 
         return restaurantController.create(new CreateRestaurantInputDto("Cantina", cnpj, "Italiana", owner.id(),
-                ADDRESS, List.of(hours(DayOfWeek.MONDAY, 11, 15), hours(DayOfWeek.FRIDAY, 18, 2))));
+                ADDRESS, List.of(hours(DayOfWeek.MONDAY, 11, 15), hours(DayOfWeek.FRIDAY, 18, 2))),
+                new RequesterDto(owner.id(), false));
     }
 
     @Test
@@ -106,20 +110,22 @@ class RestauranteIntegrationTest {
 
     @Test
     void shouldManageMenuItemThroughAllLayers() {
-        Long restaurantId = createRestaurant("11111111111", "11111111000111").id();
+        RestaurantOutputDto restaurant = createRestaurant("11111111111", "11111111000111");
+        Long restaurantId = restaurant.id();
+        RequesterDto owner = ownerOf(restaurant);
 
         MenuItemOutputDto created = menuItemController.create(new CreateMenuItemInputDto(
-                restaurantId, "Pizza", "Pizza de queijo", new BigDecimal("39.90"), false, "/fotos/pizza.png"));
+                restaurantId, "Pizza", "Pizza de queijo", new BigDecimal("39.90"), false, "/fotos/pizza.png"), owner);
 
         assertNotNull(created.id());
         assertEquals(1, menuItemController.findByRestaurantId(restaurantId).size());
 
         MenuItemOutputDto updated = menuItemController.update(new UpdateMenuItemInputDto(
-                created.id(), "Pizza grande", "Pizza de queijo grande", new BigDecimal("59.90"), true, null));
+                created.id(), "Pizza grande", "Pizza de queijo grande", new BigDecimal("59.90"), true, null), owner);
         assertEquals("Pizza grande", updated.name());
         assertEquals(0, new BigDecimal("59.90").compareTo(menuItemController.findById(created.id()).price()));
 
-        menuItemController.delete(created.id());
+        menuItemController.delete(created.id(), owner);
         Long id = created.id();
         assertThrows(MenuItemNotFoundException.class, () -> menuItemController.findById(id));
     }
@@ -127,7 +133,7 @@ class RestauranteIntegrationTest {
     @Test
     void shouldNotCreateMenuItemForUnknownRestaurant() {
         assertThrows(RestaurantNotFoundException.class, () -> menuItemController.create(new CreateMenuItemInputDto(
-                999_999L, "Pizza", "Pizza de queijo", new BigDecimal("39.90"), false, null)));
+                999_999L, "Pizza", "Pizza de queijo", new BigDecimal("39.90"), false, null), ADMIN));
     }
 
     @Test
@@ -241,6 +247,7 @@ class RestauranteIntegrationTest {
     void shouldManageRestaurantThroughAllLayers() {
         RestaurantOutputDto created = createRestaurant("22222222222", "22.222.222/0001-22");
         Long ownerId = created.ownerId();
+        RequesterDto owner = ownerOf(created);
 
         assertEquals("22222222000122", created.cnpj());
         assertEquals(List.of(DayOfWeek.MONDAY, DayOfWeek.FRIDAY),
@@ -249,7 +256,7 @@ class RestauranteIntegrationTest {
         RestaurantOutputDto updated = restaurantController.update(new UpdateRestaurantInputDto(created.id(),
                 "Cantina Nova", "Italiana", ownerId,
                 new AddressInputDto("Rua Augusta", "500", null, "Consolação", "São Paulo", StatesEnum.SP, "01305000"),
-                List.of(hours(DayOfWeek.MONDAY, 11, 15), hours(DayOfWeek.TUESDAY, 11, 15))));
+                List.of(hours(DayOfWeek.MONDAY, 11, 15), hours(DayOfWeek.TUESDAY, 11, 15))), owner);
 
         assertEquals("Cantina Nova", updated.name());
         assertEquals(created.address().id(), updated.address().id());
@@ -260,10 +267,11 @@ class RestauranteIntegrationTest {
         assertEquals(1, restaurantController.findAll().size());
 
         assertThrows(CnpjAlreadyRegisteredException.class, () -> restaurantController.create(new CreateRestaurantInputDto(
-                "Outra", "22222222000122", "Japonesa", ownerId, ADDRESS, List.of(hours(DayOfWeek.MONDAY, 11, 15)))));
+                "Outra", "22222222000122", "Japonesa", ownerId, ADDRESS, List.of(hours(DayOfWeek.MONDAY, 11, 15))),
+                owner));
         assertThrows(RestaurantOwnerHasRestaurantsException.class, () -> restaurantOwnerController.delete(ownerId));
 
-        restaurantController.delete(created.id());
+        restaurantController.delete(created.id(), owner);
         assertThrows(RestaurantNotFoundException.class, () -> restaurantController.findById(created.id()));
         assertFalse(addressRepository.existsById(created.address().id()));
 

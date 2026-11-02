@@ -1,5 +1,6 @@
 package br.com.fiap.restaurante.infra.security;
 
+import br.com.fiap.restaurante.core.dto.RequesterDto;
 import br.com.fiap.restaurante.infra.database.jpa.entity.AppUserEntity;
 import br.com.fiap.restaurante.infra.database.jpa.entity.UserTypeEntity;
 import br.com.fiap.restaurante.infra.database.jpa.repository.AppUserRepository;
@@ -44,6 +45,18 @@ class AppUserDetailsServiceTest {
         assertEquals("$2a$10$hash", user.getPassword());
         assertEquals(Set.of("ROLE_RESTAURANT_OWNER", "ROLE_PREMIUM_CUSTOMER"),
                 AuthorityUtils.authorityListToSet(user.getAuthorities()));
+        assertEquals(new RequesterDto(20L, false), assertInstanceOf(AppUserPrincipal.class, user).toRequester());
+    }
+
+    @Test
+    void shouldIdentifyAdministrator() {
+        when(appUserRepository.findByLoginIgnoreCase("admin"))
+                .thenReturn(Optional.of(new AppUserEntity(1L, 10L, "admin", "$2a$10$hash")));
+        when(userTypeRepository.findByAppUserId(1L)).thenReturn(List.of(new UserTypeEntity(5L, "admin", "admin")));
+
+        UserDetails user = service.loadUserByUsername("admin");
+
+        assertEquals(new RequesterDto(10L, true), assertInstanceOf(AppUserPrincipal.class, user).toRequester());
     }
 
     @Test

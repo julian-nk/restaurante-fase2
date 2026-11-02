@@ -5,8 +5,10 @@ import br.com.fiap.restaurante.core.domain.StatesEnum;
 import br.com.fiap.restaurante.core.dto.*;
 import br.com.fiap.restaurante.core.exception.CnpjAlreadyRegisteredException;
 import br.com.fiap.restaurante.core.exception.InvalidFieldException;
+import br.com.fiap.restaurante.core.exception.NotRestaurantOwnerException;
 import br.com.fiap.restaurante.core.exception.RestaurantNotFoundException;
 import br.com.fiap.restaurante.core.exception.RestaurantOwnerNotFoundException;
+import br.com.fiap.restaurante.core.exception.RestaurantTransferNotAllowedException;
 import br.com.fiap.restaurante.core.factory.impl.AddressFactoryImpl;
 import br.com.fiap.restaurante.core.factory.impl.OpeningHoursFactoryImpl;
 import br.com.fiap.restaurante.core.factory.impl.RestaurantFactoryImpl;
@@ -33,6 +35,11 @@ class RestaurantUseCasesTest {
             new AddressInputDto("Rua A", "10", null, "Centro", "Campinas", StatesEnum.SP, "13010000");
     private static final List<OpeningHoursInputDto> HOURS =
             List.of(new OpeningHoursInputDto(DayOfWeek.MONDAY, LocalTime.of(11, 0), LocalTime.of(15, 0)));
+
+    /** O dono dos restaurantes destes testes é a pessoa 7. */
+    private static final RequesterDto OWNER = new RequesterDto(7L, false);
+    private static final RequesterDto OTHER_OWNER = new RequesterDto(8L, false);
+    private static final RequesterDto ADMIN = new RequesterDto(1L, true);
 
     private final OpeningHoursFactoryImpl openingHoursFactory = new OpeningHoursFactoryImpl();
     private final RestaurantFactoryImpl factory = new RestaurantFactoryImpl(new AddressFactoryImpl(),
@@ -68,7 +75,7 @@ class RestaurantUseCasesTest {
         @Test
         void shouldCreateRestaurant() {
             RestaurantOutputDto output = useCase.execute(
-                    new CreateRestaurantInputDto("Cantina", "12.345.678/0001-99", "Italiana", 7L, ADDRESS, HOURS));
+                    new CreateRestaurantInputDto("Cantina", "12.345.678/0001-99", "Italiana", 7L, ADDRESS, HOURS), OWNER);
 
             assertEquals("12345678000199", output.cnpj());
             assertEquals("Campinas", output.address().city());
@@ -78,8 +85,24 @@ class RestaurantUseCasesTest {
         @Test
         void shouldRejectUnknownOwner() {
             assertThrows(RestaurantOwnerNotFoundException.class, () -> useCase.execute(
-                    new CreateRestaurantInputDto("Cantina", "12345678000199", "Italiana", 8L, ADDRESS, HOURS)));
+                    new CreateRestaurantInputDto("Cantina", "12345678000199", "Italiana", 8L, ADDRESS, HOURS), ADMIN));
             verify(gateway, never()).save(any());
+        }
+
+        @Test
+        void ownerShouldNotCreateRestaurantForAnotherOwner() {
+            assertThrows(NotRestaurantOwnerException.class, () -> useCase.execute(
+                    new CreateRestaurantInputDto("Cantina", "12345678000199", "Italiana", 7L, ADDRESS, HOURS),
+                    OTHER_OWNER));
+            verify(gateway, never()).save(any());
+        }
+
+        @Test
+        void adminShouldCreateRestaurantForAnyOwner() {
+            RestaurantOutputDto output = useCase.execute(
+                    new CreateRestaurantInputDto("Cantina", "12345678000199", "Italiana", 7L, ADDRESS, HOURS), ADMIN);
+
+            assertEquals(7L, output.ownerId());
         }
 
         @Test
@@ -87,13 +110,14 @@ class RestaurantUseCasesTest {
             when(gateway.existsByCnpj("12345678000199")).thenReturn(true);
 
             assertThrows(CnpjAlreadyRegisteredException.class, () -> useCase.execute(
-                    new CreateRestaurantInputDto("Cantina", "12345678000199", "Italiana", 7L, ADDRESS, HOURS)));
+                    new CreateRestaurantInputDto("Cantina", "12345678000199", "Italiana", 7L, ADDRESS, HOURS), OWNER));
         }
 
         @Test
         void shouldValidateBeforeQueryingGateways() {
             assertThrows(InvalidFieldException.class, () -> useCase.execute(
-                    new CreateRestaurantInputDto("Cantina", "12345678000199", "Italiana", 7L, ADDRESS, List.of())));
+                    new CreateRestaurantInputDto("Cantina", "12345678000199", "Italiana", 7L, ADDRESS, List.of()),
+                    OWNER));
             verifyNoInteractions(ownerGateway);
         }
     }
@@ -138,7 +162,7 @@ class RestaurantUseCasesTest {
                     new UpdateRestaurantInputDto(1L, "Cantina Nova", "Italiana", 7L,
                                                  new AddressInputDto("Rua B", "20", null, "Centro", "Campinas",
                                                                      StatesEnum.SP,
-                                                                     "13010000"), newHours));
+                                                                     "13010000"), newHours), OWNER);
 
             assertEquals(1L, output.id());
             assertEquals("Cantina Nova", output.name());
@@ -149,22 +173,48 @@ class RestaurantUseCasesTest {
         @Test
         void shouldRequireAddressAndOpeningHours() {
             assertThrows(InvalidFieldException.class, () -> useCase.execute(
-                    new UpdateRestaurantInputDto(1L, "Cantina", "Italiana", 7L, null, HOURS)));
+                    new UpdateRestaurantInputDto(1L, "Cantina", "Italiana", 7L, null, HOURS), OWNER));
             assertThrows(InvalidFieldException.class, () -> useCase.execute(
-                    new UpdateRestaurantInputDto(1L, "Cantina", "Italiana", 7L, ADDRESS, null)));
+                    new UpdateRestaurantInputDto(1L, "Cantina", "Italiana", 7L, ADDRESS, null), OWNER));
             verify(gateway, never()).save(any());
         }
 
         @Test
         void shouldRejectUnknownOwner() {
             assertThrows(RestaurantOwnerNotFoundException.class, () -> useCase.execute(
-                    new UpdateRestaurantInputDto(1L, "Cantina", "Italiana", 8L, ADDRESS, HOURS)));
+                    new UpdateRestaurantInputDto(1L, "Cantina", "Italiana", 8L, ADDRESS, HOURS), ADMIN));
         }
 
         @Test
         void shouldThrowWhenNotFound() {
             assertThrows(RestaurantNotFoundException.class, () -> useCase.execute(
-                    new UpdateRestaurantInputDto(9L, "Cantina", "Italiana", 7L, ADDRESS, HOURS)));
+                    new UpdateRestaurantInputDto(9L, "Cantina", "Italiana", 7L, ADDRESS, HOURS), OWNER));
+        }
+
+        @Test
+        void ownerShouldNotUpdateRestaurantOfAnotherOwner() {
+            assertThrows(NotRestaurantOwnerException.class, () -> useCase.execute(
+                    new UpdateRestaurantInputDto(1L, "Cantina", "Italiana", 7L, ADDRESS, HOURS), OTHER_OWNER));
+            verify(gateway, never()).save(any());
+        }
+
+        @Test
+        void ownerShouldNotTransferRestaurant() {
+            when(ownerGateway.existsById(8L)).thenReturn(true);
+
+            assertThrows(RestaurantTransferNotAllowedException.class, () -> useCase.execute(
+                    new UpdateRestaurantInputDto(1L, "Cantina", "Italiana", 8L, ADDRESS, HOURS), OWNER));
+            verify(gateway, never()).save(any());
+        }
+
+        @Test
+        void adminShouldTransferRestaurant() {
+            when(ownerGateway.existsById(8L)).thenReturn(true);
+
+            RestaurantOutputDto output = useCase.execute(
+                    new UpdateRestaurantInputDto(1L, "Cantina", "Italiana", 8L, ADDRESS, HOURS), ADMIN);
+
+            assertEquals(8L, output.ownerId());
         }
     }
 
@@ -173,16 +223,35 @@ class RestaurantUseCasesTest {
 
         @Test
         void shouldDeleteRestaurant() {
-            when(gateway.existsById(1L)).thenReturn(true);
+            when(gateway.findById(1L)).thenReturn(Optional.of(persisted()));
 
-            new DeleteRestaurantUseCaseImpl(gateway).execute(1L);
+            new DeleteRestaurantUseCaseImpl(gateway).execute(1L, OWNER);
 
             verify(gateway).deleteById(1L);
         }
 
         @Test
         void shouldThrowWhenNotFound() {
-            assertThrows(RestaurantNotFoundException.class, () -> new DeleteRestaurantUseCaseImpl(gateway).execute(9L));
+            assertThrows(RestaurantNotFoundException.class,
+                         () -> new DeleteRestaurantUseCaseImpl(gateway).execute(9L, OWNER));
+        }
+
+        @Test
+        void ownerShouldNotDeleteRestaurantOfAnotherOwner() {
+            when(gateway.findById(1L)).thenReturn(Optional.of(persisted()));
+
+            assertThrows(NotRestaurantOwnerException.class,
+                         () -> new DeleteRestaurantUseCaseImpl(gateway).execute(1L, OTHER_OWNER));
+            verify(gateway, never()).deleteById(any());
+        }
+
+        @Test
+        void adminShouldDeleteAnyRestaurant() {
+            when(gateway.findById(1L)).thenReturn(Optional.of(persisted()));
+
+            new DeleteRestaurantUseCaseImpl(gateway).execute(1L, ADMIN);
+
+            verify(gateway).deleteById(1L);
         }
     }
 }

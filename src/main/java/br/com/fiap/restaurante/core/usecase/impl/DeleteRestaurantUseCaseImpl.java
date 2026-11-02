@@ -1,6 +1,6 @@
 package br.com.fiap.restaurante.core.usecase.impl;
 
-import br.com.fiap.restaurante.core.exception.RestaurantNotFoundException;
+import br.com.fiap.restaurante.core.dto.RequesterDto;
 import br.com.fiap.restaurante.core.gateway.RestaurantGateway;
 import br.com.fiap.restaurante.core.usecase.DeleteRestaurantUseCase;
 
@@ -14,10 +14,8 @@ public class DeleteRestaurantUseCaseImpl implements DeleteRestaurantUseCase {
     }
 
     @Override
-    public void execute(Long id) {
-        if (!restaurantGateway.existsById(id)) {
-            throw new RestaurantNotFoundException(id);
-        }
+    public void execute(Long id, RequesterDto requester) {
+        RestaurantAccess.findManageable(restaurantGateway, id, requester);
         restaurantGateway.deleteById(id);
     }
 }

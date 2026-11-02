@@ -51,20 +51,21 @@ class CoreControllersTest {
         var output = new MenuItemOutputDto(1L, 1L, "Pizza", "Pizza de queijo", BigDecimal.TEN, false, null);
         var createInput = new CreateMenuItemInputDto(1L, "Pizza", "Pizza de queijo", BigDecimal.TEN, false, null);
         var updateInput = new UpdateMenuItemInputDto(1L, "Pizza", "Pizza de queijo", BigDecimal.TEN, false, null);
-        when(create.execute(createInput)).thenReturn(output);
+        var requester = new RequesterDto(7L, false);
+        when(create.execute(createInput, requester)).thenReturn(output);
         when(getAll.execute()).thenReturn(List.of(output));
         when(getById.execute(1L)).thenReturn(output);
         when(getByRestaurant.execute(1L)).thenReturn(List.of(output));
-        when(update.execute(updateInput)).thenReturn(output);
+        when(update.execute(updateInput, requester)).thenReturn(output);
 
-        assertSame(output, controller.create(createInput));
+        assertSame(output, controller.create(createInput, requester));
         assertEquals(List.of(output), controller.findAll());
         assertSame(output, controller.findById(1L));
         assertEquals(List.of(output), controller.findByRestaurantId(1L));
-        assertSame(output, controller.update(updateInput));
-        controller.delete(1L);
+        assertSame(output, controller.update(updateInput, requester));
+        controller.delete(1L, requester);
 
-        verify(delete).execute(1L);
+        verify(delete).execute(1L, requester);
     }
 
     @Test

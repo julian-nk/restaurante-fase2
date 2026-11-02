@@ -1,6 +1,8 @@
 package br.com.fiap.restaurante.core.usecase;
 
+import br.com.fiap.restaurante.core.dto.RequesterDto;
+
 public interface DeleteRestaurantUseCase {
 
-    void execute(Long id);
+    void execute(Long id, RequesterDto requester);
 }
