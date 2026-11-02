@@ -1,0 +1,39 @@
+package br.com.fiap.restaurante.core.usecase.impl;
+
+import br.com.fiap.restaurante.core.domain.MenuItem;
+import br.com.fiap.restaurante.core.dto.MenuItemOutputDto;
+import br.com.fiap.restaurante.core.dto.RequesterDto;
+import br.com.fiap.restaurante.core.dto.UpdateMenuItemInputDto;
+import br.com.fiap.restaurante.core.exception.MenuItemNotFoundException;
+import br.com.fiap.restaurante.core.gateway.MenuItemGateway;
+import br.com.fiap.restaurante.core.gateway.RestaurantGateway;
+import br.com.fiap.restaurante.core.usecase.UpdateMenuItemUseCase;
+
+public class UpdateMenuItemUseCaseImpl implements UpdateMenuItemUseCase {
+
+    private final MenuItemGateway menuItemGateway;
+    private final RestaurantGateway restaurantGateway;
+
+    public UpdateMenuItemUseCaseImpl(MenuItemGateway menuItemGateway, RestaurantGateway restaurantGateway) {
+        this.menuItemGateway = menuItemGateway;
+        this.restaurantGateway = restaurantGateway;
+    }
+
+    @Override
+    public MenuItemOutputDto execute(UpdateMenuItemInputDto input, RequesterDto requester) {
+
+        MenuItem menuItem = menuItemGateway.findById(input.id())
+                                           .orElseThrow(() -> new MenuItemNotFoundException(input.id()));
+        RestaurantAccess.findManageable(restaurantGateway, menuItem.getRestaurantId(), requester);
+
+        menuItem.update(
+                input.name(),
+                input.description(),
+                input.price(),
+                input.dineInOnly(),
+                input.photoUrl()
+        );
+
+        return MenuItemOutputDto.from(menuItemGateway.save(menuItem));
+    }
+}
