@@ -43,7 +43,7 @@ docker compose up -d --build
 
 - O `--build` compila o projeto dentro da imagem com `mvnw clean package -DskipTests` (os testes não rodam nesse build). A primeira execução é mais lenta porque baixa as dependências do Maven; as seguintes reaproveitam o cache.
 - O `backend` só é iniciado depois que o banco passa no healthcheck, o que leva cerca de um minuto na primeira subida.
-- Ao iniciar, o Flyway cria as tabelas (scripts em `src/main/resources/db/migration`), cadastra os tipos de usuário iniciais (`restaurant_owner`, `customer`, `staff`, `premium_customer` e `admin`) e cria três usuários para acessar a API (ver abaixo). A migration `V4` dá aos usuários de clientes e donos que já existiam o tipo do papel.
+- Ao iniciar, o Flyway cria as tabelas (scripts em `src/main/resources/db/migration`), cadastra os tipos de usuário iniciais (`restaurant_owner`, `customer`, `staff`, `premium_customer` e `admin`) e cria três usuários para acessar a API (ver abaixo).
 
 ### 3. Acessar
 
@@ -81,10 +81,11 @@ O projeto segue a **Clean Architecture** com um pacote `core` com as regras de n
 br.com.fiap.restaurante
 ├── core                         # Java puro (sem Spring, JPA ou Jakarta Validation)
 │   ├── controller               # Controllers do core: recebem DTOs e chamam os use cases
-│   ├── domain                   # Entidades de domínio com suas validações + implementações das factories
+│   ├── domain                   # Entidades de domínio com suas validações
 │   ├── dto                      # DTOs de entrada/saída dos use cases
 │   ├── exception                # Exceções de negócio (código + status HTTP sugerido)
 │   ├── factory                  # Interfaces das factories (criação e reconstrução das entidades)
+│   │   └── impl                 # Implementações das factories
 │   ├── gateway                  # Interfaces de saída (persistência), implementadas pela infra
 │   └── usecase                  # Casos de uso: interfaces (implementações em usecase/impl)
 └── infra                        # Detalhes de framework
