@@ -3,6 +3,7 @@ package br.com.fiap.restaurante.core.controller;
 import br.com.fiap.restaurante.core.dto.AppUserOutputDto;
 import br.com.fiap.restaurante.core.dto.ChangePasswordInputDto;
 import br.com.fiap.restaurante.core.dto.CreateAppUserInputDto;
+import br.com.fiap.restaurante.core.dto.RequesterDto;
 import br.com.fiap.restaurante.core.usecase.ChangeAppUserPasswordUseCase;
 import br.com.fiap.restaurante.core.usecase.CreateAppUserUseCase;
 import br.com.fiap.restaurante.core.usecase.DeleteAppUserUseCase;
@@ -45,8 +46,8 @@ public class AppUserController {
         return getAppUserByIdUseCase.execute(id);
     }
 
-    public void changePassword(ChangePasswordInputDto input) {
-        changeAppUserPasswordUseCase.execute(input);
+    public void changePassword(ChangePasswordInputDto input, RequesterDto requester) {
+        changeAppUserPasswordUseCase.execute(input, requester);
     }
 
     public void delete(Long id) {

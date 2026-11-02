@@ -5,10 +5,12 @@ import br.com.fiap.restaurante.core.factory.impl.AppUserFactoryImpl;
 import br.com.fiap.restaurante.core.dto.AppUserOutputDto;
 import br.com.fiap.restaurante.core.dto.ChangePasswordInputDto;
 import br.com.fiap.restaurante.core.dto.CreateAppUserInputDto;
+import br.com.fiap.restaurante.core.dto.RequesterDto;
 import br.com.fiap.restaurante.core.exception.AppUserNotFoundException;
 import br.com.fiap.restaurante.core.exception.InvalidFieldException;
 import br.com.fiap.restaurante.core.exception.InvalidPasswordException;
 import br.com.fiap.restaurante.core.exception.LoginAlreadyInUseException;
+import br.com.fiap.restaurante.core.exception.PasswordChangeNotAllowedException;
 import br.com.fiap.restaurante.core.exception.PersonAlreadyHasUserException;
 import br.com.fiap.restaurante.core.exception.PersonNotFoundException;
 import br.com.fiap.restaurante.core.gateway.AppUserGateway;
@@ -125,6 +127,9 @@ class AppUserUseCasesTest {
     @Nested
     class ChangePassword {
 
+        /** A Maria (usuário 1) é a pessoa 10. */
+        private static final RequesterDto MARIA = new RequesterDto(10L, false);
+
         private ChangeAppUserPasswordUseCase useCase;
 
         @BeforeEach
@@ -137,7 +142,7 @@ class AppUserUseCasesTest {
         void shouldChangePassword() {
             when(passwordEncoder.matches("senhaAtual1", "hash:senhaAtual1")).thenReturn(true);
 
-            useCase.execute(new ChangePasswordInputDto(1L, "senhaAtual1", "senhaNova2"));
+            useCase.execute(new ChangePasswordInputDto(1L, "senhaAtual1", "senhaNova2"), MARIA);
 
             ArgumentCaptor<AppUser> captor = ArgumentCaptor.forClass(AppUser.class);
             verify(gateway).save(captor.capture());
@@ -149,9 +154,9 @@ class AppUserUseCasesTest {
             when(passwordEncoder.matches("errada123", "hash:senhaAtual1")).thenReturn(false);
 
             assertThrows(InvalidPasswordException.class,
-                    () -> useCase.execute(new ChangePasswordInputDto(1L, "errada123", "senhaNova2")));
+                    () -> useCase.execute(new ChangePasswordInputDto(1L, "errada123", "senhaNova2"), MARIA));
             assertThrows(InvalidPasswordException.class,
-                    () -> useCase.execute(new ChangePasswordInputDto(1L, null, "senhaNova2")));
+                    () -> useCase.execute(new ChangePasswordInputDto(1L, null, "senhaNova2"), MARIA));
             verify(gateway, never()).save(any());
         }
 
@@ -160,13 +165,25 @@ class AppUserUseCasesTest {
             when(passwordEncoder.matches("senhaAtual1", "hash:senhaAtual1")).thenReturn(true);
 
             assertThrows(InvalidFieldException.class,
-                    () -> useCase.execute(new ChangePasswordInputDto(1L, "senhaAtual1", "fraca")));
+                    () -> useCase.execute(new ChangePasswordInputDto(1L, "senhaAtual1", "fraca"), MARIA));
         }
 
         @Test
-        void shouldThrowWhenUserNotFound() {
-            assertThrows(AppUserNotFoundException.class,
-                    () -> useCase.execute(new ChangePasswordInputDto(9L, "senhaAtual1", "senhaNova2")));
+        void shouldNotChangeThePasswordOfAnotherUser() {
+            when(passwordEncoder.matches("senhaAtual1", "hash:senhaAtual1")).thenReturn(true);
+
+            // nem sabendo a senha atual, nem sendo administrador
+            assertThrows(PasswordChangeNotAllowedException.class, () -> useCase.execute(
+                    new ChangePasswordInputDto(1L, "senhaAtual1", "senhaNova2"), new RequesterDto(11L, false)));
+            assertThrows(PasswordChangeNotAllowedException.class, () -> useCase.execute(
+                    new ChangePasswordInputDto(1L, "senhaAtual1", "senhaNova2"), new RequesterDto(99L, true)));
+            verify(gateway, never()).save(any());
+        }
+
+        @Test
+        void shouldAnswerTheSameForUnknownUser() {
+            assertThrows(PasswordChangeNotAllowedException.class,
+                    () -> useCase.execute(new ChangePasswordInputDto(9L, "senhaAtual1", "senhaNova2"), MARIA));
         }
     }
 

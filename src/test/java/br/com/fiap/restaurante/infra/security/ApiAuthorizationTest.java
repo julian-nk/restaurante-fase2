@@ -61,6 +61,7 @@ class ApiAuthorizationTest {
     private PasswordEncoder passwordEncoder;
 
     private Long customerId;
+    private Long ownerUserId;
 
     private static String basic(String login) {
         String credentials = login + ":" + PASSWORD;
@@ -80,7 +81,7 @@ class ApiAuthorizationTest {
     @BeforeEach
     void createUsers() {
         createUser(3001L, ADMIN, UserTypeEnum.ADMIN.getCode());
-        createUser(3002L, OWNER, UserTypeEnum.RESTAURANT_OWNER.getCode());
+        ownerUserId = createUser(3002L, OWNER, UserTypeEnum.RESTAURANT_OWNER.getCode());
         customerId = createUser(3003L, CUSTOMER, UserTypeEnum.CUSTOMER.getCode());
     }
 
@@ -152,5 +153,24 @@ class ApiAuthorizationTest {
                      "{\"currentPassword\": \"senhaErrada1\", \"newPassword\": \"senhaNova123\"}"), CUSTOMER)
                 .andExpect(status().is(422))
                 .andExpect(jsonPath("$.code").value("appUser.invalidPassword"));
+    }
+
+    @Test
+    void onlyTheUserShouldChangeTheirOwnPassword() throws Exception {
+        // todos os usuários deste teste têm a mesma senha: nem sabendo a senha atual do outro dá para trocá-la
+        String body = "{\"currentPassword\": \"" + PASSWORD + "\", \"newPassword\": \"senhaNova123\"}";
+
+        expectPasswordChangeNotAllowed(perform(json(patch("/api/app-users/" + ownerUserId + "/password"), body), CUSTOMER));
+        expectPasswordChangeNotAllowed(perform(json(patch("/api/app-users/" + ownerUserId + "/password"), body), ADMIN));
+        // um ID que não existe recebe a mesma resposta, para não revelar quais usuários existem
+        expectPasswordChangeNotAllowed(perform(json(patch("/api/app-users/999999/password"), body), CUSTOMER));
+
+        perform(json(patch("/api/app-users/" + ownerUserId + "/password"), body), OWNER)
+                .andExpect(status().isNoContent());
+    }
+
+    private static void expectPasswordChangeNotAllowed(ResultActions result) throws Exception {
+        result.andExpect(status().isForbidden())
+              .andExpect(jsonPath("$.code").value("appUser.passwordChangeNotAllowed"));
     }
 }

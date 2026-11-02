@@ -3,8 +3,9 @@ package br.com.fiap.restaurante.core.usecase.impl;
 import br.com.fiap.restaurante.core.domain.AppUser;
 import br.com.fiap.restaurante.core.domain.PasswordPolicy;
 import br.com.fiap.restaurante.core.dto.ChangePasswordInputDto;
-import br.com.fiap.restaurante.core.exception.AppUserNotFoundException;
+import br.com.fiap.restaurante.core.dto.RequesterDto;
 import br.com.fiap.restaurante.core.exception.InvalidPasswordException;
+import br.com.fiap.restaurante.core.exception.PasswordChangeNotAllowedException;
 import br.com.fiap.restaurante.core.gateway.AppUserGateway;
 import br.com.fiap.restaurante.core.gateway.PasswordEncoderGateway;
 import br.com.fiap.restaurante.core.usecase.ChangeAppUserPasswordUseCase;
@@ -20,9 +21,12 @@ public class ChangeAppUserPasswordUseCaseImpl implements ChangeAppUserPasswordUs
     }
 
     @Override
-    public void execute(ChangePasswordInputDto input) {
+    public void execute(ChangePasswordInputDto input, RequesterDto requester) {
+        // Cada pessoa tem no máximo um usuário, então o usuário logado é o que tem a pessoa dele. Um ID que não é
+        // o do usuário logado recebe a mesma resposta exista ele ou não, para não revelar quais usuários existem.
         AppUser appUser = appUserGateway.findById(input.appUserId())
-                .orElseThrow(() -> new AppUserNotFoundException(input.appUserId()));
+                .filter(user -> user.getPersonId().equals(requester.personId()))
+                .orElseThrow(PasswordChangeNotAllowedException::new);
 
         if (input.currentPassword() == null
                 || !passwordEncoder.matches(input.currentPassword(), appUser.getPasswordHash())) {

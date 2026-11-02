@@ -2,6 +2,7 @@ package br.com.fiap.restaurante.infra.web;
 
 import br.com.fiap.restaurante.core.controller.AppUserController;
 import br.com.fiap.restaurante.core.dto.AppUserOutputDto;
+import br.com.fiap.restaurante.infra.security.AppUserPrincipal;
 import br.com.fiap.restaurante.infra.web.json.ChangePasswordJson;
 import br.com.fiap.restaurante.infra.web.json.CreateAppUserJson;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -71,17 +73,23 @@ public class AppUserApi {
 
     @PatchMapping("/{id}/password")
     @Operation(summary = "Troca a senha do usuário",
-            description = "Exige a senha atual. A nova senha precisa ter de 8 a 72 caracteres, com letras e "
-                    + "números.")
+            description = "Cada usuário só troca a própria senha: o ID precisa ser o do usuário logado, mesmo "
+                    + "para o administrador. Exige a senha atual. A nova senha precisa ter de 8 a 72 caracteres, "
+                    + "com letras e números.")
     @Parameter(in = ParameterIn.PATH, name = "id", description = "ID do usuário", example = "1")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Senha alterada."),
             @ApiResponse(responseCode = "400", description = "Dados inválidos ou nova senha fora da política."),
-            @ApiResponse(responseCode = "404", description = "Usuário não encontrado."),
+            @ApiResponse(responseCode = "403", description = "O ID não é o do usuário logado. A resposta é a "
+                    + "mesma quando o usuário não existe, para não revelar quais usuários existem."),
             @ApiResponse(responseCode = "422", description = "A senha atual está incorreta.")
     })
-    public ResponseEntity<Void> changePassword(@PathVariable Long id, @Valid @RequestBody ChangePasswordJson json) {
-        appUserController.changePassword(json.toInputDto(id));
+    public ResponseEntity<Void> changePassword(
+            @PathVariable Long id,
+            @Valid @RequestBody ChangePasswordJson json,
+            @Parameter(hidden = true) Authentication authentication
+    ) {
+        appUserController.changePassword(json.toInputDto(id), AppUserPrincipal.requesterOf(authentication));
         return ResponseEntity.noContent().build();
     }
 

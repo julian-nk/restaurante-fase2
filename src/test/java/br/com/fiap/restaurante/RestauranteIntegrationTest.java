@@ -164,9 +164,10 @@ class RestauranteIntegrationTest {
         assertEquals("Av. Paulista", restaurantOwnerController.findById(personId).address().street());
 
         AppUserOutputDto user = appUserController.create(new CreateAppUserInputDto(personId, "maria", "senhaForte1"));
-        appUserController.changePassword(new ChangePasswordInputDto(user.id(), "senhaForte1", "senhaNova2"));
+        RequesterDto maria = new RequesterDto(personId, false);
+        appUserController.changePassword(new ChangePasswordInputDto(user.id(), "senhaForte1", "senhaNova2"), maria);
         assertThrows(InvalidPasswordException.class, () -> appUserController.changePassword(
-                new ChangePasswordInputDto(user.id(), "senhaForte1", "outraSenha3")));
+                new ChangePasswordInputDto(user.id(), "senhaForte1", "outraSenha3"), maria));
         assertThrows(PersonAlreadyHasUserException.class, () -> appUserController.create(
                 new CreateAppUserInputDto(personId, "maria2", "senhaForte1")));
 
@@ -234,7 +235,8 @@ class RestauranteIntegrationTest {
                 appUserTypeController.findUserTypes(userId).stream().map(UserTypeOutputDto::id).toList());
 
         // trocar a senha grava o usuário de novo, e os tipos precisam continuar lá
-        appUserController.changePassword(new ChangePasswordInputDto(userId, "senhaForte1", "senhaNova2"));
+        appUserController.changePassword(new ChangePasswordInputDto(userId, "senhaForte1", "senhaNova2"),
+                                         new RequesterDto(personId, false));
         assertEquals(2, appUserTypeController.findUserTypes(userId).size());
 
         appUserTypeController.remove(userId, staff);

@@ -5271,6 +5271,21 @@
                           "language": "json"
                         }
                       }
+                    },
+                    "auth": {
+                      "type": "basic",
+                      "basic": [
+                        {
+                          "key": "username",
+                          "value": "{{appUserLogin}}",
+                          "type": "string"
+                        },
+                        {
+                          "key": "password",
+                          "value": "{{appUserPassword}}",
+                          "type": "string"
+                        }
+                      ]
                     }
                   },
                   "response": []
@@ -6382,6 +6397,21 @@
                           "language": "json"
                         }
                       }
+                    },
+                    "auth": {
+                      "type": "basic",
+                      "basic": [
+                        {
+                          "key": "username",
+                          "value": "{{appUserLogin}}",
+                          "type": "string"
+                        },
+                        {
+                          "key": "password",
+                          "value": "{{appUserPassword}}",
+                          "type": "string"
+                        }
+                      ]
                     }
                   },
                   "response": []
@@ -6535,6 +6565,334 @@
                           "language": "json"
                         }
                       }
+                    },
+                    "auth": {
+                      "type": "basic",
+                      "basic": [
+                        {
+                          "key": "username",
+                          "value": "{{appUserLogin}}",
+                          "type": "string"
+                        },
+                        {
+                          "key": "password",
+                          "value": "{{appUserPassword}}",
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
+              "name": "Senha de outro usuário",
+              "item": [
+                {
+                  "name": "1 - Cadastrar pessoa",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('Pré-condição: status 201', () => pm.response.to.have.status(201));",
+                          "const json = pm.response.json();",
+                          "pm.collectionVariables.set('personId', json.id);",
+                          "pm.collectionVariables.set('personCpf', json.cpf);",
+                          "pm.collectionVariables.set('personEmail', json.email);"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "http://{{host}}:{{port}}/api/persons",
+                      "protocol": "http",
+                      "host": [
+                        "{{host}}"
+                      ],
+                      "port": "{{port}}",
+                      "path": [
+                        "api",
+                        "persons"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n    \"name\": \"Ana Pereira\",\n    \"email\": \"ana.{{uid}}@email.com\",\n    \"cpf\": \"{{randomCpf}}\",\n    \"address\": {\n        \"street\": \"Av. Paulista\",\n        \"number\": \"1000\",\n        \"complement\": \"Sala 12\",\n        \"neighborhood\": \"Bela Vista\",\n        \"city\": \"São Paulo\",\n        \"state\": \"SP\",\n        \"zipCode\": \"01310-100\"\n    }\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "2 - Criar usuário de acesso",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('Pré-condição: status 201', () => pm.response.to.have.status(201));",
+                          "const json = pm.response.json();",
+                          "pm.collectionVariables.set('appUserId', json.id);",
+                          "pm.collectionVariables.set('appUserLogin', json.login);",
+                          "pm.collectionVariables.set('appUserPassword', 'senha1234');"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "http://{{host}}:{{port}}/api/app-users",
+                      "protocol": "http",
+                      "host": [
+                        "{{host}}"
+                      ],
+                      "port": "{{port}}",
+                      "path": [
+                        "api",
+                        "app-users"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n    \"personId\": {{personId}},\n    \"login\": \"ana.{{uid}}\",\n    \"password\": \"senha1234\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "3 - Admin tenta trocar a senha do usuário",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                          "const body = pm.response.json();",
+                          "pm.test('Código do erro: appUser.passwordChangeNotAllowed', () => pm.expect(body.code).to.eql('appUser.passwordChangeNotAllowed'));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "http://{{host}}:{{port}}/api/app-users/{{appUserId}}/password",
+                      "protocol": "http",
+                      "host": [
+                        "{{host}}"
+                      ],
+                      "port": "{{port}}",
+                      "path": [
+                        "api",
+                        "app-users",
+                        "{{appUserId}}",
+                        "password"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n    \"currentPassword\": \"{{appUserPassword}}\",\n    \"newPassword\": \"novaSenha456\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "description": "Cada usuário só troca a própria senha, mesmo sabendo a senha atual do outro e mesmo sendo administrador."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "4 - Cliente tenta trocar a senha do usuário",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                          "const body = pm.response.json();",
+                          "pm.test('Código do erro: appUser.passwordChangeNotAllowed', () => pm.expect(body.code).to.eql('appUser.passwordChangeNotAllowed'));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "http://{{host}}:{{port}}/api/app-users/{{appUserId}}/password",
+                      "protocol": "http",
+                      "host": [
+                        "{{host}}"
+                      ],
+                      "port": "{{port}}",
+                      "path": [
+                        "api",
+                        "app-users",
+                        "{{appUserId}}",
+                        "password"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n    \"currentPassword\": \"{{appUserPassword}}\",\n    \"newPassword\": \"novaSenha456\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "auth": {
+                      "type": "basic",
+                      "basic": [
+                        {
+                          "key": "username",
+                          "value": "{{customerLogin}}",
+                          "type": "string"
+                        },
+                        {
+                          "key": "password",
+                          "value": "{{customerPassword}}",
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "5 - Trocar senha de usuário inexistente",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                          "const body = pm.response.json();",
+                          "pm.test('Código do erro: appUser.passwordChangeNotAllowed', () => pm.expect(body.code).to.eql('appUser.passwordChangeNotAllowed'));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "url": {
+                      "raw": "http://{{host}}:{{port}}/api/app-users/999999999/password",
+                      "protocol": "http",
+                      "host": [
+                        "{{host}}"
+                      ],
+                      "port": "{{port}}",
+                      "path": [
+                        "api",
+                        "app-users",
+                        "999999999",
+                        "password"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n    \"currentPassword\": \"{{appUserPassword}}\",\n    \"newPassword\": \"novaSenha456\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "description": "A resposta é a mesma de um usuário que existe, para não revelar quais usuários existem."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "6 - A senha do usuário continua a mesma",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "pm.test('Status 200: a senha original ainda autentica', () => pm.response.to.have.status(200));"
+                        ]
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "http://{{host}}:{{port}}/api/menu-items",
+                      "protocol": "http",
+                      "host": [
+                        "{{host}}"
+                      ],
+                      "port": "{{port}}",
+                      "path": [
+                        "api",
+                        "menu-items"
+                      ]
+                    },
+                    "auth": {
+                      "type": "basic",
+                      "basic": [
+                        {
+                          "key": "username",
+                          "value": "{{appUserLogin}}",
+                          "type": "string"
+                        },
+                        {
+                          "key": "password",
+                          "value": "{{appUserPassword}}",
+                          "type": "string"
+                        }
+                      ]
                     }
                   },
                   "response": []
@@ -6743,55 +7101,6 @@
                         "app-users",
                         "999999999"
                       ]
-                    }
-                  },
-                  "response": []
-                },
-                {
-                  "name": "Trocar senha de usuário inexistente",
-                  "event": [
-                    {
-                      "listen": "test",
-                      "script": {
-                        "type": "text/javascript",
-                        "exec": [
-                          "pm.test('Status 404', () => pm.response.to.have.status(404));",
-                          "const body = pm.response.json();",
-                          "pm.test('Código do erro: appUser.notFound', () => pm.expect(body.code).to.eql('appUser.notFound'));"
-                        ]
-                      }
-                    }
-                  ],
-                  "request": {
-                    "method": "PATCH",
-                    "header": [
-                      {
-                        "key": "Content-Type",
-                        "value": "application/json"
-                      }
-                    ],
-                    "url": {
-                      "raw": "http://{{host}}:{{port}}/api/app-users/999999999/password",
-                      "protocol": "http",
-                      "host": [
-                        "{{host}}"
-                      ],
-                      "port": "{{port}}",
-                      "path": [
-                        "api",
-                        "app-users",
-                        "999999999",
-                        "password"
-                      ]
-                    },
-                    "body": {
-                      "mode": "raw",
-                      "raw": "{\n    \"currentPassword\": \"senha1234\",\n    \"newPassword\": \"novaSenha456\"\n}",
-                      "options": {
-                        "raw": {
-                          "language": "json"
-                        }
-                      }
                     }
                   },
                   "response": []

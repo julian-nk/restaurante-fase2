@@ -24,6 +24,7 @@ class RegistrationControllersTest {
         var output = new AppUserOutputDto(1L, 10L, "maria");
         var createInput = new CreateAppUserInputDto(10L, "maria", "senhaForte1");
         var passwordInput = new ChangePasswordInputDto(1L, "senhaForte1", "senhaNova2");
+        var maria = new RequesterDto(10L, false);
         when(create.execute(createInput)).thenReturn(output);
         when(getAll.execute()).thenReturn(List.of(output));
         when(getById.execute(1L)).thenReturn(output);
@@ -31,9 +32,9 @@ class RegistrationControllersTest {
         assertSame(output, controller.create(createInput));
         assertEquals(List.of(output), controller.findAll());
         assertSame(output, controller.findById(1L));
-        controller.changePassword(passwordInput);
+        controller.changePassword(passwordInput, maria);
         controller.delete(1L);
-        verify(changePassword).execute(passwordInput);
+        verify(changePassword).execute(passwordInput, maria);
         verify(delete).execute(1L);
     }
 

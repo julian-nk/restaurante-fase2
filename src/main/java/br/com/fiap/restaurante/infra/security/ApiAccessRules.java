@@ -30,7 +30,8 @@ public final class ApiAccessRules {
             onlyTypes(null, "/api/restaurants/**", UserTypeEnum.ADMIN, UserTypeEnum.RESTAURANT_OWNER),
             onlyTypes(null, "/api/menu-items/**", UserTypeEnum.ADMIN, UserTypeEnum.RESTAURANT_OWNER),
 
-            // Troca de senha: o caso de uso confere a senha atual, então qualquer usuário autenticado pode chamar
+            // Troca de senha: qualquer usuário autenticado chega ao caso de uso, que só aceita o próprio usuário
+            // logado e confere a senha atual
             anyUser(HttpMethod.PATCH, "/api/app-users/*/password"),
 
             // Demais endpoints (tipos de usuário e associações, usuários, pessoas, clientes e donos): administrador

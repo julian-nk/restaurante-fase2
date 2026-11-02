@@ -56,8 +56,8 @@ Usuários criados pela migration `V3__create_initial_users.sql` para facilitar o
 | Login | Senha | Tipo de usuário | O que pode fazer |
 | --- | --- | --- | --- |
 | `admin` | `admin12345` | `admin` | Tudo |
-| `dono` | `dono12345` | `restaurant_owner` | Consultar restaurantes e pratos; cadastrar, alterar e excluir os próprios restaurantes e pratos; trocar a senha |
-| `cliente` | `cliente123` | `customer` | Consultar restaurantes e pratos; trocar a senha |
+| `dono` | `dono12345` | `restaurant_owner` | Consultar restaurantes e pratos; cadastrar, alterar e excluir os próprios restaurantes e pratos; trocar a própria senha |
+| `cliente` | `cliente123` | `customer` | Consultar restaurantes e pratos; trocar a própria senha |
 
 O que cada tipo de usuário pode fazer está em [Autenticação e permissões](#autenticação-e-permissões).
 
@@ -146,12 +146,12 @@ Cada tipo associado ao usuário (`/api/app-users/{id}/types`) vira uma permissã
 | --- | --- |
 | `GET /api/restaurants/**` e `GET /api/menu-items/**` | Qualquer usuário autenticado |
 | `POST`, `PUT` e `DELETE` em `/api/restaurants/**` e `/api/menu-items/**` | `restaurant_owner` ou `admin` |
-| `PATCH /api/app-users/{id}/password` | Qualquer usuário autenticado (o caso de uso confere a senha atual) |
+| `PATCH /api/app-users/{id}/password` | Qualquer usuário autenticado, só para a própria senha: o `{id}` tem que ser o do usuário logado, inclusive para o `admin`|
 | Todas as demais (tipos de usuário e associações, usuários, pessoas, clientes e donos) | `admin` |
 
 As regras ficam em um único lugar, `infra/security/ApiAccessRules`: a lista `RULES`, em que vale a primeira regra que casar com a requisição (por isso as mais específicas vêm antes), e a lista `PUBLIC_PATHS`, com as rotas que não exigem login (a documentação e a página de erro). O `SecurityConfig` aplica as regras, e o Swagger as documenta a partir dessa classe.
 
-As recusas da segurança são respondidas pelo `JsonSecurityErrorHandler`, e as da regra de dono, pelos casos de uso, todas no mesmo formato dos outros erros:
+As recusas da segurança são respondidas pelo `JsonSecurityErrorHandler`, e as das regras de dono e de troca de senha, pelos casos de uso, todas no mesmo formato dos outros erros:
 
 | Status | `code` | Quando |
 | --- | --- | --- |
@@ -159,6 +159,7 @@ As recusas da segurança são respondidas pelo `JsonSecurityErrorHandler`, e as 
 | 403 | `auth.forbidden` | Credenciais válidas, mas nenhum tipo do usuário tem permissão para a rota |
 | 403 | `restaurant.notOwner` | O restaurante (ou o restaurante do prato) é de outro dono, ou o cadastro informa outro dono |
 | 403 | `restaurant.transferNotAllowed` | Quem não é administrador tentou trocar o dono do restaurante |
+| 403 | `appUser.passwordChangeNotAllowed` | O `{id}` da troca de senha não é o do usuário logado. Um usuário que não existe recebe a mesma resposta |
 
 ## Collection do Postman
 
